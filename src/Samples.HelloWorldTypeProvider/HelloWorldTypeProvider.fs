@@ -1,26 +1,61 @@
-﻿namespace ProtoTypeProvider
+﻿// Copyright (c) Microsoft Corporation 2005-2011.
+// This sample code is provided "as is" without warranty of any kind. 
+// We disclaim all warranties, either express or implied, including the 
+// warranties of merchantability and fitness for a particular purpose. 
+
+// This is a sample type provider. It provides 100 types, each containing various properties, 
+// methods and nested types.
+//
+// This code is a sample for use in conjunction with the F# 3.0 Developer Preview release of September 2011.
+//
+// 1. Using the Provider
+// 
+//   To use this provider, open a separate instance of Visual Studio 11 and reference the provider
+//   using #r, e.g.
+//      #r @"bin\Debug\HelloWorldTypeProvider.dll"
+//
+//   Then look for the types under 
+//      Samples.HelloWorldTypeProvider
+//
+// 2. Recompiling the Provider
+//
+//   Make sure you have exited all instances of Visual Studio and F# Interactive using the 
+//   provider DLL before recompiling the provider.
+//
+// 3. Debugging the Provider
+//
+//   To debug this provider using 'print' statements, make a script that exposes a 
+//   problem with the provider, then use
+// 
+//      fsc.exe -r:bin\Debug\HelloWorldTypeProvider.dll script.fsx
+//
+//   To debug this provider using Visual Studio, use
+//
+//      devenv.exe /debugexe fsc.exe -r:bin\Debug\HelloWorldTypeProvider.dll script.fsx
+//
+//   and disable "Just My Code" debugging. Consider setting first-chance exception catching using 
+//
+//      Debug --> Exceptions --> CLR Exceptions --> Thrown
+
+namespace Samples.FSharp.HelloWorldTypeProvider
 
 open System
 open System.Reflection
-open ProviderImplementation.ProvidedTypes
+open Samples.FSharp.ProvidedTypes
 open Microsoft.FSharp.Core.CompilerServices
 open Microsoft.FSharp.Quotations
 
-// This type defines the type provider. When compiled to a DLL, it can be added
-// as a reference to an F# command-line compilation, script, or project.
+// This defines the type provider. When compiled to a DLL it can be added as a reference to an F#
+// command-line compilation, script or project.
 [<TypeProvider>]
-type ProtoTypeProvider(config: TypeProviderConfig) as this = 
+type SampleTypeProvider(config: TypeProviderConfig) as this = 
 
-    // Inheriting from this type provides implementations of ITypeProvider 
-    // in terms of the provided types below.
+    // Inheriting from this type provides implementations of ITypeProvider in terms of the
+    // provided types below.
     inherit TypeProviderForNamespaces()
 
     let namespaceName = "Samples.HelloWorldTypeProvider"
     let thisAssembly = Assembly.GetExecutingAssembly()
-
-
-
-   
 
     // Make one provided type, called TypeN
     let makeOneProvidedType (n:int) = 
@@ -169,21 +204,14 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
 
         // The result is the type.
         t
-    
-
-
 
     // Now generate 100 types
     let types = [ for i in 1 .. 100 -> makeOneProvidedType i ] 
 
     // And add them to the namespace
     do this.AddNamespace(namespaceName, types)
-
+                            
 [<assembly:TypeProviderAssembly>] 
 do()
 
 
-
-
-
-//.
