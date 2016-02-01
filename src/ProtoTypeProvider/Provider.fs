@@ -19,8 +19,8 @@ type SampleTypeProvider(config: TypeProviderConfig) as this =
     let thisAssembly = Assembly.GetExecutingAssembly()
 
     // Make one provided type, called TypeN.
-    let makeOneProvidedType (n:int) = 
-        …
+    let makeOneProvidedType (n:int) =         …
+
     // Now generate 100 types
     let types = [ for i in 1 .. 100 -> makeOneProvidedType i ] 
 
