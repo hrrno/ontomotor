@@ -2,7 +2,7 @@
 
 open System
 open System.Reflection
-open Samples.FSharp.ProvidedTypes
+open ProviderImplementation.ProvidedTypes
 open Microsoft.FSharp.Core.CompilerServices
 open Microsoft.FSharp.Quotations
 
@@ -18,8 +18,17 @@ type SampleTypeProvider(config: TypeProviderConfig) as this =
     let namespaceName = "Samples.HelloWorldTypeProvider"
     let thisAssembly = Assembly.GetExecutingAssembly()
 
+
+
+    //type Type1
+
     // Make one provided type, called TypeN.
-    let makeOneProvidedType (n:int) =         …
+    let makeOneProvidedType (n:int) = 
+        ProvidedTypeDefinition(thisAssembly,namespaceName,
+                                   "Type" + string n,
+                                   baseType = Some typeof<obj>)
+    
+    //new        //  …
 
     // Now generate 100 types
     let types = [ for i in 1 .. 100 -> makeOneProvidedType i ] 
