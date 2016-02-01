@@ -18,7 +18,9 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
     let namespaceName = "Samples.HelloWorldTypeProvider"
     let thisAssembly = Assembly.GetExecutingAssembly()
 
-    //type Type1
+
+
+
 
     // Make one provided type, called TypeN.
     let makeOneProvidedType (n:int) = 
@@ -26,7 +28,8 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
                                    "Type" + string n,
                                    baseType = Some typeof<obj>)
     
-    //new        //  …
+
+
 
     // Now generate 100 types
     let types = [ for i in 1 .. 100 -> makeOneProvidedType i ] 

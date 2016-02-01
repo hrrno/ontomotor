@@ -3,10 +3,10 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{23AFE2AC-9347-49AC-AC77-EA19F3962892}</ProjectGuid>
+    <ProjectGuid>{B04CEE1E-E0D9-4294-AC7C-CD78921D8071}</ProjectGuid>
     <OutputType>Library</OutputType>
-    <RootNamespace>ProtoTypeProvider</RootNamespace>
-    <AssemblyName>ProtoTypeProvider</AssemblyName>
+    <RootNamespace>ProviderTest</RootNamespace>
+    <AssemblyName>ProviderTest</AssemblyName>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -41,9 +41,6 @@
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="Component1.fs" />
     <Compile Include="Script.fsx" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="MarkdownTypeProvider.md" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\..\Microsoft SDKs\F#\3.1\Framework\v4.0\Microsoft.FSharp.Targets" />
 </Project>
