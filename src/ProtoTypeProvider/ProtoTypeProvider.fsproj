@@ -38,7 +38,7 @@
       <Visible>true</Visible>
       <Link>ProvidedTypes-0.3.fs</Link>
     </Compile>
-    <Compile Include="HelloWorldTypeProvider.fs" />
+    <Compile Include="ProtoTypeProvider.fs" />
     <None Include="test.fsx" />
   </ItemGroup>
   <ItemGroup>

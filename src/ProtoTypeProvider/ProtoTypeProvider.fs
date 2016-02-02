@@ -37,7 +37,7 @@
 //
 //      Debug --> Exceptions --> CLR Exceptions --> Thrown
 
-namespace Samples.FSharp.HelloWorldTypeProvider
+namespace ProtoType
 
 open System
 open System.Reflection
@@ -48,13 +48,13 @@ open Microsoft.FSharp.Quotations
 // This defines the type provider. When compiled to a DLL it can be added as a reference to an F#
 // command-line compilation, script or project.
 [<TypeProvider>]
-type SampleTypeProvider(config: TypeProviderConfig) as this = 
+type ProtoTypeProvider(config: TypeProviderConfig) as this = 
 
     // Inheriting from this type provides implementations of ITypeProvider in terms of the
     // provided types below.
     inherit TypeProviderForNamespaces()
 
-    let namespaceName = "Samples.HelloWorldTypeProvider"
+    let namespaceName = "Proto.TypeProvider"
     let thisAssembly = Assembly.GetExecutingAssembly()
 
     // Make one provided type, called TypeN
