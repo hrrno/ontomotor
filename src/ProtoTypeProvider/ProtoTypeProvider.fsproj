@@ -1,56 +1,65 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
+    <AssemblyName>ProtoTypeProvider</AssemblyName>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{23AFE2AC-9347-49AC-AC77-EA19F3962892}</ProjectGuid>
     <OutputType>Library</OutputType>
-    <RootNamespace>ProtoTypeProvider</RootNamespace>
-    <AssemblyName>ProtoTypeProvider</AssemblyName>
+    <AllowCrossTargeting>true</AllowCrossTargeting>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
-    <TargetFrameworkProfile />
+    <TargetFrameworkProfile>
+    </TargetFrameworkProfile>
+    <OutputPath>bin\$(Configuration)</OutputPath>
+    <WarningLevel>3</WarningLevel>
+    <ProjectGuid>{23afe2ac-9347-49ac-ac77-ea19f3962892}</ProjectGuid>
+    <TargetFSharpCoreVersion>4.3.0.0</TargetFSharpCoreVersion>
+    <MinimumVisualStudioVersion Condition="'$(MinimumVisualStudioVersion)' == ''">11</MinimumVisualStudioVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>bin\Debug</OutputPath>
-    <DefineConstants>DEBUG</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <ConsolePause>false</ConsolePause>
-    <PlatformTarget>
-    </PlatformTarget>
+    <Tailcalls>false</Tailcalls>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <DebugSymbols>false</DebugSymbols>
+    <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>bin\Release</OutputPath>
-    <DefineConstants>
-    </DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <ConsolePause>false</ConsolePause>
-    <GenerateTailCalls>true</GenerateTailCalls>
-    <PlatformTarget>
-    </PlatformTarget>
+    <Tailcalls>true</Tailcalls>
+    <DefineConstants>TRACE</DefineConstants>
   </PropertyGroup>
-  <Import Project="$(MSBuildExtensionsPath32)\..\Microsoft SDKs\F#\3.1\Framework\v4.0\Microsoft.FSharp.Targets" />
+  <!--  <Import Project="$(MSBuildExtensionsPath32)\..\Microsoft SDKs\F#\3.0\Framework\v4.0\Microsoft.FSharp.Targets" Condition=" Exists('$(MSBuildExtensionsPath32)\..\Microsoft SDKs\F#\3.0\Framework\v4.0\Microsoft.FSharp.Targets')" /> -->
   <ItemGroup>
-    <Compile Include="AssemblyInfo.fs" />
-    <Compile Include="..\..\paket-files\fsprojects\FSharp.TypeProviders.StarterPack\src\ProvidedTypes.fsi">
-      <Link>ProvidedTypes.fsi</Link>
+    <Compile Include="..\shared\ProvidedTypes-0.3.fsi">
+      <Visible>true</Visible>
+      <Link>ProvidedTypes-0.3.fsi</Link>
     </Compile>
-    <Compile Include="..\..\paket-files\fsprojects\FSharp.TypeProviders.StarterPack\src\ProvidedTypes.fs">
-      <Link>ProvidedTypes.fs</Link>
+    <Compile Include="..\shared\ProvidedTypes-0.3.fs">
+      <Visible>true</Visible>
+      <Link>ProvidedTypes-0.3.fs</Link>
     </Compile>
-    <Compile Include="Provider.fs" />
-    <Compile Include="Script.fsx" />
-    <Compile Include="ProtoProvider.fs" />
-    <None Include="docs\MarkdownTypeProvider.md" />
+    <Compile Include="HelloWorldTypeProvider.fs" />
+    <None Include="test.fsx" />
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="mscorlib" />
-    <Reference Include="FSharp.Core" />
-    <Reference Include="System" />
+    <Reference Include="FSharp.Core, Version=$(TargetFSharpCoreVersion), Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System.Core" />
-    <Reference Include="System.Numerics" />
+    <Reference Include="System" />
+    <Reference Include="mscorlib" />
   </ItemGroup>
+  <Choose>
+    <When Condition="'$(VisualStudioVersion)' == '11.0'">
+      <PropertyGroup>
+        <FSharpTargetsPath>$(MSBuildExtensionsPath32)\..\Microsoft SDKs\F#\3.0\Framework\v4.0\Microsoft.FSharp.Targets</FSharpTargetsPath>
+      </PropertyGroup>
+    </When>
+    <Otherwise>
+      <PropertyGroup>
+        <FSharpTargetsPath>$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\FSharp\Microsoft.FSharp.Targets</FSharpTargetsPath>
+      </PropertyGroup>
+    </Otherwise>
+  </Choose>
+  <Import Project="$(FSharpTargetsPath)" Condition="Exists('$(FSharpTargetsPath)')" />
 </Project>
