@@ -3,13 +3,13 @@
 open System
 open System.Reflection
 open ProviderImplementation.ProvidedTypes
-open Microsoft.FSharp.Core.CompilerServices
+open Microsoft.FSharp.Core.CompilerServices 
 open Microsoft.FSharp.Quotations
 
 // This type defines the type provider. When compiled to a DLL, it can be added
 // as a reference to an F# command-line compilation, script, or project.
-[<TypeProvider>]
-type ProtoTypeProvider(config: TypeProviderConfig) as this = 
+[< Core.CompilerServices.TypeProvider>]
+type ProtoTypeProvider(config: Core.CompilerServices.TypeProviderConfig) as this = 
 
     // Inheriting from this type provides implementations of ITypeProvider 
     // in terms of the provided types below.
