@@ -1,4 +1,4 @@
-﻿namespace ProtoTypeProvider
+﻿    namespace ProtoTypeProvider
 
 open System
 open System.Reflection
