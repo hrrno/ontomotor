@@ -30,8 +30,39 @@
             // Doc.MatchesSchema (schema)
 
 
+open System.IO
+open System.Text.RegularExpressions
+
+let testDir = __SOURCE_DIRECTORY__ + "/../data/test/test1/"
+let testFile = testDir + "content-autoprops.md"
+let md = File.ReadAllText(testFile)
+
+// yaml blocks, headers, subsection props
+
+// Tokenize?
+
+type MarkdownContent = 
+    | YamlBlock of int * string 
+    | Header of int * string
+
+
+let headerMatches = Regex.Matches(md, "^(#+)(.*)$",   RegexOptions.Multiline)
+let propMatches   = Regex.Matches(md, "^(\w+:)(.*)$", RegexOptions.Multiline)
+let yamlBlocks    = Regex.Matches(md, "---(.*?)---",  RegexOptions.Singleline)
+
+for m in yamlBlocks do
+    printf "%s\r\n" (m.Captures.[0].Value.ToString()) // .Index.ToString())
+
+
+
+
+
 
 // Load files as a collection
     // Provide a unified type for all files in the collection for loops
     // Perhaps add a downcast operator to get the raw, unrestricted, manifestation of the file?
         // ie GroupObj.Explicit runs the provider on a single file, with only those props...
+
+
+
+

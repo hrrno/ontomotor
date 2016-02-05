@@ -3,7 +3,7 @@ layout: doesn't matter
 title: The original dream
 description: This is the intial idea for typed access that inspired the whole deal
 date: 2016-02-04
-published: false
+published: false  # this is a comment
 ---
 
 
@@ -49,6 +49,7 @@ Autoprop3: 123
 Autoprop4: 142,20
 Autoprop5: 1234.2
 Autoprop6: { name: foo; charge: bar; }
+Autoprop7: 999 # this is a comment
 
 
 Loose content 3
