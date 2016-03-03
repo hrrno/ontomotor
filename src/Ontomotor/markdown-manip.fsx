@@ -41,79 +41,54 @@ let md = File.ReadAllText(testFile)
 // Tokenize?
 
 type Token = 
+    | Root     of position : int * content: string 
     | Header   of position : int * content: string 
     | Yaml     of position : int * content: string
     | Property of position : int * content: string
-    | Blank
+    //| Blank
     with member x.Id = 
             match x with
+            | Root     (i,c) -> i
             | Header   (i,c) -> i
             | Yaml     (i,c) -> i
             | Property (i,c) -> i
-            | Blank          -> -1
-        
+            //| Blank          -> -1
+         member x.Content = 
+            match x with
+            | Root     (i,c) -> c
+            | Header   (i,c) -> c
+            | Yaml     (i,c) -> c
+            | Property (i,c) -> c
+            //| Blank          -> -1
 
 let captures (matches : MatchCollection) = seq { for m in matches do yield m.Captures.[0] } 
 
 let makeTokens (token : int * string -> Token ) matches  = 
     matches 
     |> captures 
-    |> Seq.map (fun c -> token(c.Index, c.Value))
+    |> Seq.map (fun c -> token(c.Index, c.Value.Trim()))
     |> Seq.toList
 
 let headerMatches = Regex.Matches(md, "^(#+)(.*)$",   RegexOptions.Multiline)
 let propMatches   = Regex.Matches(md, "^(\w+:)(.*)$", RegexOptions.Multiline)
 let yamlBlocks    = Regex.Matches(md, "---(.*?)---",  RegexOptions.Singleline)
 
-let combined = [Header(0, "Document Root")] 
+let combined = [Root(0, "Document Root")] 
                  @ makeTokens Header   headerMatches 
                  @ makeTokens Yaml     yamlBlocks 
                  @ makeTokens Property propMatches 
                |> List.sortBy (fun t -> t.Id)
 
 
-type TokenTree = 
-    | Node of Token * TokenTree list
+//type TokenAcc = TokenAcc of main : Token list * child : Token list
+//    with member this.Latest = 
+//                match this with 
+//                | TokenAcc (main, child) -> 
+//                    match child with
+//                    | x :: xs -> x
+//                    | [] -> Blank
 
-
-type TokenAcc = TokenAcc of main : Token list * child : Token list
-    with member this.Latest = 
-                match this with 
-                | TokenAcc (main, child) -> 
-                    match child with
-                    | x :: xs -> x
-                    | [] -> Blank
-
-let (|Gt|Lt|Eq|) (first, second) =
-    match first with
-    | Header _ -> 
-        match second with 
-        | Header _ -> Eq
-        | _ -> Lt
-    | Yaml _ -> 
-        match second with 
-        | Header _ -> Gt
-        | Yaml _ -> Eq
-        | Property _ -> Lt
-        | _ -> Lt
-    | Property _ ->
-        match second with 
-        | Property _ -> Eq
-        | _ -> Lt
-    | _ -> Lt
-
-//let folder (acc:TokenAcc) elem =
-//    match acc.Latest, elem with
-//    | Gt -> TokenAcc([],[])
-//    | Lt -> TokenAcc([],[])
-//    | Eq -> TokenAcc([],[])
-//    
-//
-//let tree = combined |> List.fold folder (TokenAcc([],[]))
-//
-//let upsideDown = combined.Reverse() |> Seq.toList
-
-
+// delete this...
 type Tree = 
   | Branch of string * list<Tree>
 
@@ -127,6 +102,57 @@ let src = [
                         (3, "b11");
                     (1, "b2");
             ]
+
+
+type TokenTree = 
+    | Node of Token * TokenTree list
+
+type Comparison = | Gt | Lt | Eq
+type TokenComparison = Comparison * Token
+
+let compare (first, second) =
+    match first with
+    | Root _ -> Gt
+    | Header _ -> 
+        match second with 
+        | Header _ -> Eq
+        | _ -> Gt
+    | Yaml _ -> 
+        match second with 
+        | Header _ -> Lt
+        | Yaml _ | Property _ -> Eq
+        | _ -> Lt
+    | Property _ ->
+        match second with 
+        | Yaml _ | Property _ -> Eq
+        | _ -> Lt
+    //| _ -> Lt
+
+
+let rec checkToken (comparisons : TokenComparison list) (tokens : Token list) : TokenComparison list =
+    match tokens with
+    | x::xs when comparisons = [] -> checkToken [Eq, x] (x::xs)
+    | x::xs::xss -> checkToken (comparisons @ [(compare (x, xs), xs)]) (xs::xss)
+    | [_] | []   -> comparisons
+    
+let offsets = checkToken [] combined
+
+for (comp, toke) in offsets do
+    printf "%A %s\r\n" comp toke.Content
+
+
+let rec buildDom offset (tree : Token list) (tokens : TokenComparison list) =
+    match tokens with
+    | [] -> tree, []
+    | (Lt, _)::xs -> tree, []
+    | (comp, token)::xs ->
+        let rec collectSubtrees xs tree =
+            match buildDom comp [] xs with
+            | _ -> true
+        [Node(token, collectSubtrees xs tree)]
+
+let dom = buildDom Eq [] offsets
+
 
 /// Build a tree from elements of 'list' that have larger index than 'offset'. As soon
 /// as it finds element below or equal to 'offset', it returns trees found so far
