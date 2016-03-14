@@ -1,4 +1,6 @@
 ﻿
+
+
 // Loading and manipulating Markdown files
 // Baseline functionality for file manip to be fed into the TypeProvider
 
@@ -140,23 +142,40 @@ let comparisons = checkToken [] combined
 for (comp, toke) in comparisons do
     printf "%A >> %s\r\n" comp toke.Content
 
+let rec prettyPrint (dom:TokenTree list) (offset:int) =
+    match dom with
+    | (Node(token, sub))::xs ->
+        let indent = System.String('\t', offset)
+        printf "%s%s\r\n" indent token.Content
+        prettyPrint sub (offset + 1)
+        prettyPrint xs offset
+    | [] -> ()
+
+
 let rec buildDom (comparisons : TokenComparison list) (trees : TokenTree list)  =
     match comparisons with
     | [] -> [], trees
     | (Lt, _)::xs -> comparisons, trees
-    | (comp, token)::xs ->
+    | (comp, token)::rest ->
         let rec collectSubtrees comps tree =
             match (buildDom comps trees) with
             | rest, [] -> rest, tree
-            | (x::rest), newtrees -> collectSubtrees rest (tree @ newtrees)
-            | [], newtrees -> collectSubtrees [] (tree @ newtrees)
-        let rest, sub = collectSubtrees xs []
-        let node = Node(token, sub)
-        rest, [node]
+            | (x::rest),  newtrees -> collectSubtrees rest (tree @ newtrees)
+            | [] as rest, newtrees -> collectSubtrees rest (tree @ newtrees)
+
+
+        let comps, subtree = collectSubtrees rest []
+        comps, [Node(token, subtree)]
+
 
 let extractDom comparisons = buildDom comparisons [] |> snd
+let dom = comparisons |> extractDom
+prettyPrint dom 0
 
-let dom = extractDom comparisons
+
+
+
+
 
 /// Build a tree from elements of 'list' that have larger index than 'offset'. As soon
 /// as it finds element below or equal to 'offset', it returns trees found so far
