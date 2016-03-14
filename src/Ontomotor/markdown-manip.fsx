@@ -89,18 +89,26 @@ let compare (first, second) =
 
 let rec compareToken (comparisons : TokenComparison list) (tokens : Token list) : TokenComparison list =
     match tokens with
-    | x::xs when List.isEmpty comparisons -> compareToken [Eq, x] (x::xs)
+    | x::xs when List.isEmpty comparisons -> compareToken [Lt, x] (x::xs)
     | x::xs::xss -> compareToken (comparisons @ [(compare (x, xs), xs)]) (xs::xss)
     | [_] | []   -> comparisons
 
-let rec prettyPrint (dom:TokenTree list) (offset:int) =
+let printComparisons (comparisons : TokenComparison list) =
+    for (comp, toke) in comparisons do
+        printf "%A >> %s\r\n" comp toke.Content
+
+let rec printDomOffset (offset : int) (dom : TokenTree list)  =
     match dom with
     | (Node(token, sub))::xs ->
         let indent = System.String('\t', offset)
-        printf "%s%s\r\n" indent token.Content
-        prettyPrint sub (offset + 1)
-        prettyPrint xs offset
+        let content = token.Content.Replace("\r\n", "\r\n" + indent)
+        printf "%s%s\r\n" indent content
+        printDomOffset (offset + 1) sub
+        printDomOffset offset xs
     | [] -> ()
+
+let printDom dom = dom |> printDomOffset 0
+
 
 let headerMatches md = Regex.Matches(md, "^(#+)(.*)$",   RegexOptions.Multiline)
 let propMatches   md = Regex.Matches(md, "^(\w+:)(.*)$", RegexOptions.Multiline)
@@ -115,24 +123,6 @@ let makeTokens (makeToken : int * string -> Token) matches =
     |> Seq.toList
 
 
-let rec buildDom (comparisons : TokenComparison list) (trees : TokenTree list)  =
-    match comparisons with
-    | [] -> [], trees
-    | (Lt, _)::xs -> comparisons, trees
-    | (comp, token)::rest ->
-        let rec collectSubtrees comps tree =
-            match (buildDom comps trees) with
-            | rest, [] -> rest, tree
-            | (x::rest),  newtrees -> collectSubtrees rest (tree @ newtrees)
-            | [] as rest, newtrees -> collectSubtrees rest (tree @ newtrees)
-
-        let comps, subtree = collectSubtrees rest []
-        comps, [Node(token, subtree)]
-
-let extractDom comparisons = buildDom comparisons [] |> snd
-
-
-
 let headers = md |> headerMatches
 let props   = md |> propMatches
 let yamls   = md |> yamlBlocks
@@ -143,13 +133,34 @@ let document = [Root(0, "Document Root")]
                  @ makeTokens Yaml     yamls 
                |> List.sortBy (fun t -> t.Id)
 
-let compared = compareToken [] document
+let comparisons = compareToken [] document
 
-for (comp, toke) in compared do
-    printf "%A >> %s\r\n" comp toke.Content
 
-let dom = compared |> extractDom
-prettyPrint dom 0
+let rec collectSubtrees parentTree comps subTree  =
+    match (buildDom comps parentTree) with
+    | rest, [] -> rest, subTree
+    | (x::rest),  newtrees -> collectSubtrees parentTree rest (subTree @ newtrees) 
+    | [] as rest, newtrees -> collectSubtrees parentTree rest (subTree @ newtrees) 
+
+and buildDom (comparisons : TokenComparison list) (parentTree : TokenTree list)  =
+    match comparisons with
+    | [] -> [], parentTree
+    | (Lt, token)::rest -> 
+        let comps, subtree = collectSubtrees parentTree rest []
+        comps, ([Node(token, subtree)] @ parentTree)
+    | (Eq, token)::rest -> 
+        let comps, subtree = collectSubtrees parentTree rest []
+        comps, (parentTree @ [Node(token, subtree)])
+    | (Gt, token)::rest ->
+        let comps, subtree = collectSubtrees parentTree rest []
+        comps, ([Node(token, [])] @ subtree)
+
+
+let extractDom comparisons = buildDom comparisons [] |> snd
+
+let dom = comparisons |> extractDom
+comparisons |> printComparisons
+dom |> printDom
 
 
 
