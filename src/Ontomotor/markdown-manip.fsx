@@ -131,7 +131,7 @@ let compare (first, second) =
 
 let rec checkToken (comparisons : TokenComparison list) (tokens : Token list) : TokenComparison list =
     match tokens with
-    | x::xs when comparisons = [] -> checkToken [Eq, x] (x::xs)
+    | x::xs when List.isEmpty comparisons -> checkToken [Eq, x] (x::xs)
     | x::xs::xss -> checkToken (comparisons @ [(compare (x, xs), xs)]) (xs::xss)
     | [_] | []   -> comparisons
     
@@ -141,15 +141,18 @@ for (comp, toke) in offsets do
     printf "%A %s\r\n" comp toke.Content
 
 
-let rec buildDom offset (tree : Token list) (tokens : TokenComparison list) =
+let rec buildDom offset (trees : Token list) (tokens : TokenComparison list) =
     match tokens with
-    | [] -> tree, []
-    | (Lt, _)::xs -> tree, []
+    | [] -> trees, []
+    | (Lt, _)::xs -> trees, tokens
     | (comp, token)::xs ->
         let rec collectSubtrees xs tree =
-            match buildDom comp [] xs with
-            | _ -> true
-        [Node(token, collectSubtrees xs tree)]
+            match (buildDom comp [] xs) with
+            | [], rest -> tree, rest
+            | newtrees, rest -> collectSubtrees rest (tree @ newtrees)
+        let sub, rest = collectSubtrees xs trees
+        let node = Node(token, sub)
+        [node], rest
 
 let dom = buildDom Eq [] offsets
 
