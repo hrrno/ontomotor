@@ -4,8 +4,6 @@
 // Loading and manipulating Markdown files
 // Baseline functionality for file manip to be fed into the TypeProvider
 
-
-
 // Load the file
 
 // Grab the props
@@ -40,7 +38,6 @@ let testDir = __SOURCE_DIRECTORY__ + "/../data/test/test1/"
 let testFile = testDir + "content-autoprops-simple.md"
 let md = File.ReadAllText(testFile)
 
-// Tokenize?
 
 type Token = 
     | Root     of position : int * content: string 
@@ -62,50 +59,10 @@ type Token =
             | Yaml     (i,c) -> c
             | Property (i,c) -> c
             //| Blank          -> -1
-
-let captures (matches : MatchCollection) = seq { for m in matches do yield m.Captures.[0] } 
-
-let makeTokens (token : int * string -> Token ) matches  = 
-    matches 
-    |> captures 
-    |> Seq.map (fun c -> token(c.Index, c.Value.Trim()))
-    |> Seq.toList
-
-let headerMatches = Regex.Matches(md, "^(#+)(.*)$",   RegexOptions.Multiline)
-let propMatches   = Regex.Matches(md, "^(\w+:)(.*)$", RegexOptions.Multiline)
-let yamlBlocks    = Regex.Matches(md, "---(.*?)---",  RegexOptions.Singleline)
-
-let combined = [Root(0, "Document Root")] 
-                 @ makeTokens Header   headerMatches 
-                 @ makeTokens Yaml     yamlBlocks 
-                 @ makeTokens Property propMatches 
-               |> List.sortBy (fun t -> t.Id)
-
-
-//type TokenAcc = TokenAcc of main : Token list * child : Token list
-//    with member this.Latest = 
-//                match this with 
-//                | TokenAcc (main, child) -> 
-//                    match child with
-//                    | x :: xs -> x
-//                    | [] -> Blank
-
-// delete this...
+            
 type Tree = 
-  | Branch of string * list<Tree>
-
-let src = [
-            (0, "root");
-                (1, "a");
-                    (2, "a1");
-                    (2, "a2");
-                (1, "b");
-                    (2, "b1");
-                        (3, "b11");
-                    (1, "b2");
-            ]
-
-
+    | Branch of string * list<Tree>
+  
 type TokenTree = 
     | Node of Token * TokenTree list
 
@@ -128,19 +85,13 @@ let compare (first, second) =
         match second with 
         | Yaml _ | Property _ -> Eq
         | _ -> Lt
-    //| _ -> Lt
+        
 
-
-let rec checkToken (comparisons : TokenComparison list) (tokens : Token list) : TokenComparison list =
+let rec compareToken (comparisons : TokenComparison list) (tokens : Token list) : TokenComparison list =
     match tokens with
-    | x::xs when List.isEmpty comparisons -> checkToken [Eq, x] (x::xs)
-    | x::xs::xss -> checkToken (comparisons @ [(compare (x, xs), xs)]) (xs::xss)
+    | x::xs when List.isEmpty comparisons -> compareToken [Eq, x] (x::xs)
+    | x::xs::xss -> compareToken (comparisons @ [(compare (x, xs), xs)]) (xs::xss)
     | [_] | []   -> comparisons
-    
-let comparisons = checkToken [] combined
-
-for (comp, toke) in comparisons do
-    printf "%A >> %s\r\n" comp toke.Content
 
 let rec prettyPrint (dom:TokenTree list) (offset:int) =
     match dom with
@@ -150,6 +101,18 @@ let rec prettyPrint (dom:TokenTree list) (offset:int) =
         prettyPrint sub (offset + 1)
         prettyPrint xs offset
     | [] -> ()
+
+let headerMatches md = Regex.Matches(md, "^(#+)(.*)$",   RegexOptions.Multiline)
+let propMatches   md = Regex.Matches(md, "^(\w+:)(.*)$", RegexOptions.Multiline)
+let yamlBlocks    md = Regex.Matches(md, "---(.*?)---",  RegexOptions.Singleline)
+
+let captures (matches : MatchCollection) = seq { for m in matches do yield m.Captures.[0] } 
+
+let makeTokens (makeToken : int * string -> Token) matches = 
+    matches 
+    |> captures 
+    |> Seq.map (fun c -> makeToken(c.Index, c.Value.Trim()))
+    |> Seq.toList
 
 
 let rec buildDom (comparisons : TokenComparison list) (trees : TokenTree list)  =
@@ -163,48 +126,30 @@ let rec buildDom (comparisons : TokenComparison list) (trees : TokenTree list)  
             | (x::rest),  newtrees -> collectSubtrees rest (tree @ newtrees)
             | [] as rest, newtrees -> collectSubtrees rest (tree @ newtrees)
 
-
         let comps, subtree = collectSubtrees rest []
         comps, [Node(token, subtree)]
 
-
 let extractDom comparisons = buildDom comparisons [] |> snd
-let dom = comparisons |> extractDom
+
+
+
+let headers = md |> headerMatches
+let props   = md |> propMatches
+let yamls   = md |> yamlBlocks
+
+let document = [Root(0, "Document Root")] 
+                 @ makeTokens Header   headers
+                 @ makeTokens Property props   
+                 @ makeTokens Yaml     yamls 
+               |> List.sortBy (fun t -> t.Id)
+
+let compared = compareToken [] document
+
+for (comp, toke) in compared do
+    printf "%A >> %s\r\n" comp toke.Content
+
+let dom = compared |> extractDom
 prettyPrint dom 0
-
-
-
-
-
-
-/// Build a tree from elements of 'list' that have larger index than 'offset'. As soon
-/// as it finds element below or equal to 'offset', it returns trees found so far
-/// together with unprocessed elements.
-let rec buildTree offset trees list = 
-  match list with
-  | [] -> trees, [] // No more elements, return trees collected so far
-  | (x, _)::xs when x <= offset -> 
-      trees, list // The node is below the offset, so we return unprocessed elements
-  | (x, n)::xs ->
-      /// Collect all subtrees from 'xs' that have index larger than 'x'
-      /// (repeatedly call 'buildTree' to find all of them)
-      let rec collectSubTrees xs trees = 
-        match buildTree x [] xs with
-        | [], rest -> trees, rest
-        | newtrees, rest -> collectSubTrees rest (trees @ newtrees)
-      let sub, rest = collectSubTrees xs []
-      [Branch(n, sub)], rest
-
-let res = buildTree -1 [] src
-
-// Run up the list backwards, pushing content onto its parent?
-    // Check if each node is @less important@ than the node it meets going up
-        // if it is then it gets added as child content
-        // if it isnt then it gets setup as a new child content group
-            // parent group gets merged into a main content accumulator?
-    // push all top level headers to the document root (and/or define the root as a level 0 construct)
-
-
 
 
 
