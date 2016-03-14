@@ -35,7 +35,7 @@ open System.Linq
 open System.Text.RegularExpressions
 
 let testDir = __SOURCE_DIRECTORY__ + "/../data/test/test1/"
-let testFile = testDir + "content-autoprops.md"
+let testFile = testDir + "content-autoprops-simple.md"
 let md = File.ReadAllText(testFile)
 
 // Tokenize?
@@ -135,26 +135,34 @@ let rec checkToken (comparisons : TokenComparison list) (tokens : Token list) : 
     | x::xs::xss -> checkToken (comparisons @ [(compare (x, xs), xs)]) (xs::xss)
     | [_] | []   -> comparisons
     
-let offsets = checkToken [] combined
+let comparisons = checkToken [] combined
 
-for (comp, toke) in offsets do
-    printf "%A %s\r\n" comp toke.Content
+for (comp, toke) in comparisons do
+    printf "%A >> %s\r\n" comp toke.Content
 
-
-let rec buildDom offset (trees : Token list) (tokens : TokenComparison list) =
-    match tokens with
-    | [] -> trees, []
-    | (Lt, _)::xs -> trees, tokens
+let mutable i = 0
+let rec buildDom (comparisons : TokenComparison list) (trees : TokenTree list)  =
+    i <- i + 1
+    printf "%i BUILDING THE DOM\r\n" i
+    match comparisons with
+    | [] -> [], trees
+    | (Lt, _)::xs -> xs, trees
     | (comp, token)::xs ->
-        let rec collectSubtrees xs tree =
-            match (buildDom comp [] xs) with
-            | [], rest -> tree, rest
-            | newtrees, rest -> collectSubtrees rest (tree @ newtrees)
-        let sub, rest = collectSubtrees xs trees
-        let node = Node(token, sub)
-        [node], rest
+        let rec collectSubtrees remainingComparisons tree =
+            i <- i + 1
+            printf "%i RECURSING ON THE DOM\r\n" i
+            match (buildDom remainingComparisons [ Node (token, []) ]) with
+            | rest, [] -> rest, tree
+            | (x::rest), newtrees -> collectSubtrees rest (tree @ newtrees)
+            | [], newtrees -> collectSubtrees [] (tree @ newtrees)
+        let sub, rest = collectSubtrees xs []
+        let node = Node(token, rest)
+        sub, [node]
 
-let dom = buildDom Eq [] offsets
+
+
+
+let dom = buildDom comparisons []
 
 
 /// Build a tree from elements of 'list' that have larger index than 'offset'. As soon
