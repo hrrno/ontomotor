@@ -141,7 +141,7 @@ for (comp, toke) in comparisons do
     printf "%A >> %s\r\n" comp toke.Content
 
 let mutable i = 0
-let rec buildDom (comparisons : TokenComparison list) (trees : TokenTree list)  =
+let rec buildDomForever (comparisons : TokenComparison list) (trees : TokenTree list)  =
     i <- i + 1
     printf "%i BUILDING THE DOM\r\n" i
     match comparisons with
@@ -151,7 +151,7 @@ let rec buildDom (comparisons : TokenComparison list) (trees : TokenTree list)  
         let rec collectSubtrees remainingComparisons tree =
             i <- i + 1
             printf "%i RECURSING ON THE DOM\r\n" i
-            match (buildDom remainingComparisons [ Node (token, []) ]) with
+            match (buildDomForever remainingComparisons [ Node (token, []) ]) with
             | rest, [] -> rest, tree
             | (x::rest), newtrees -> collectSubtrees rest (tree @ newtrees)
             | [], newtrees -> collectSubtrees [] (tree @ newtrees)
@@ -161,8 +161,32 @@ let rec buildDom (comparisons : TokenComparison list) (trees : TokenTree list)  
 
 
 
+i <- 0
+let rec buildDom (comparisons : TokenComparison list) (trees : TokenTree list)  =
+    i <- i + 1
+    printf "%i BUILDING THE DOM\r\n" i
 
-let dom = buildDom comparisons []
+    match comparisons with
+    | [] -> [], trees
+    | (Lt, _)::xs -> comparisons, trees
+    | (comp, token)::xs ->
+
+        let rec collectSubtrees comps tree =
+
+            i <- i + 1
+            printf "%i RECURSING ON THE DOM\r\n" i
+
+            match (buildDom comps trees) with
+            | rest, [] -> rest, tree
+            | (x::rest), newtrees -> collectSubtrees rest (tree @ newtrees)
+            | [], newtrees -> collectSubtrees [] (tree @ newtrees)
+
+
+        let rest, sub = collectSubtrees xs []
+        let node = Node(token, sub)
+        rest, [node]
+
+let comps, dom = buildDom comparisons []
 
 
 /// Build a tree from elements of 'list' that have larger index than 'offset'. As soon
