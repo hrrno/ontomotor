@@ -35,7 +35,7 @@ open System.Linq
 open System.Text.RegularExpressions
 
 let testDir = __SOURCE_DIRECTORY__ + "/../data/test/test1/"
-let testFile = testDir + "content-autoprops-simple.md"
+let testFile = testDir + "content-autoprops-noyaml.md"
 let md = File.ReadAllText(testFile)
 
 
@@ -68,6 +68,7 @@ type TokenTree =
 
 type Comparison = | Gt | Lt | Eq
 type TokenComparison = Comparison * Token
+type TokenComparisonOffset = Comparison * int * Token
 
 let compare (first, second) =
     match first with
@@ -89,7 +90,7 @@ let compare (first, second) =
 
 let rec compareToken (comparisons : TokenComparison list) (tokens : Token list) : TokenComparison list =
     match tokens with
-    | x::xs when List.isEmpty comparisons -> compareToken [Lt, x] (x::xs)
+    | x::xs when List.isEmpty comparisons -> compareToken [Eq, x] (x::xs)
     | x::xs::xss -> compareToken (comparisons @ [(compare (x, xs), xs)]) (xs::xss)
     | [_] | []   -> comparisons
 
@@ -140,20 +141,20 @@ let rec collectSubtrees parentTree comps subTree  =
     match (buildDom comps parentTree) with
     | rest, [] -> rest, subTree
     | (x::rest),  newtrees -> collectSubtrees parentTree rest (subTree @ newtrees) 
-    | [] as rest, newtrees -> collectSubtrees parentTree rest (subTree @ newtrees) 
+    | [] as rest, newtrees -> collectSubtrees parentTree rest (newtrees) 
 
 and buildDom (comparisons : TokenComparison list) (parentTree : TokenTree list)  =
     match comparisons with
     | [] -> [], parentTree
     | (Lt, token)::rest -> 
         let comps, subtree = collectSubtrees parentTree rest []
-        comps, ([Node(token, subtree)] @ parentTree)
+        comps, (parentTree @ [Node(token, subtree)])
     | (Eq, token)::rest -> 
-        let comps, subtree = collectSubtrees parentTree rest []
+        let comps, subtree = collectSubtrees [] rest []
         comps, (parentTree @ [Node(token, subtree)])
     | (Gt, token)::rest ->
-        let comps, subtree = collectSubtrees parentTree rest []
-        comps, ([Node(token, [])] @ subtree)
+        let comps, subtree = collectSubtrees [] rest []
+        comps, ([Node(token, subtree)])
 
 
 let extractDom comparisons = buildDom comparisons [] |> snd
@@ -165,6 +166,106 @@ dom |> printDom
 
 
 
+
+// decorate the comparisons with an offsett
+let offsetCalc comp offset =
+    match comp with
+    | Lt -> offset - 1
+    | Eq -> offset
+    | Gt -> offset + 1
+
+let comparisonOffset (comparisons : TokenComparison list) =
+    let mutable offset = 0
+    [ for (comp, token) in comparisons do
+        offset <- offsetCalc comp offset
+        yield (comp, offset, token) ]
+
+comparisons |> comparisonOffset
+
+let withNr =  
+    comparisons 
+    |> List.map (fun (comp, token) -> comp, 0, token )
+    |> List.map (fun (comp, off, token) -> comp, (offsetCalc comp 0), token)
+
+
+
+let rec compareTokenOffset (comparisons : TokenComparisonOffset list) (tokens : Token list) (offset : int) : TokenComparisonOffset list =
+    match tokens with
+    | x::xs when List.isEmpty comparisons -> compareTokenOffset [Eq, 0, x] (x::xs) 0
+    | x::xs::xss -> 
+        let offsetDelta = (offsetCalc (compare (x, xs)) offset)
+        compareTokenOffset (comparisons @ [(compare (x, xs), offsetDelta, xs)]) (xs::xss) offsetDelta
+    | [_] | []   -> comparisons
+
+
+
+let printComparisonsOffset (comparisons : TokenComparisonOffset list) =
+    for (comp, offset, toke) in comparisons do
+        printf "%A >> %i >> %s\r\n" comp offset toke.Content
+
+
+let comparisonsOffset = compareTokenOffset [] document 0
+comparisonsOffset |> printComparisonsOffset
+
+//let lstcountr ls =
+//    let rec loop ls total = 
+//        match ls with
+//        | [] -> total
+//        | hd::tl -> loop tl total+1I
+//    loop ls 0I
+//
+//
+//let transmorg (comparisons : TokenComparison list) =
+//    let rec loop comp total = 
+//        match ls with
+//        | [] -> total
+//        | hd::tl -> loop tl total+1I
+//    loop ls 0I
+
+
+
+
+/// Build a tree from elements of 'list' that have larger index than 'offset'. As soon
+/// as it finds element below or equal to 'offset', it returns trees found so far
+/// together with unprocessed elements.
+let rec buildTree offset trees list = 
+  match list with
+  | [] -> trees, [] // No more elements, return trees collected so far
+  | (x, _)::xs when x <= offset -> 
+      trees, list // The node is below the offset, so we return unprocessed elements
+  | (x, n)::xs ->
+      /// Collect all subtrees from 'xs' that have index larger than 'x'
+      /// (repeatedly call 'buildTree' to find all of them)
+      let rec collectSubTrees xs trees = 
+        match buildTree x [] xs with
+        | [], rest -> trees, rest
+        | newtrees, rest -> collectSubTrees rest (trees @ newtrees)
+      let sub, rest = collectSubTrees xs []
+      [Branch(n, sub)], rest
+
+
+
+
+// Trying a new approach: seeding the comparisons with an offset, and using that to govern indentation...
+
+let src = [
+        (0, "root");
+            (1, "a");
+                (2, "a1");
+                (2, "a2");
+            (1, "b");
+                (2, "b1");
+                    (3, "b11");
+                (2, "b2");
+        ]
+let res = buildTree -1 [] src
+
+/// A helper that nicely prints a tree
+let rec print depth (Branch(n, sub)) =
+  printfn "%s%s" depth n
+  for s in sub do print (depth + "  ") s
+
+res |> fst |> Seq.head |> print ""
     
 // props first into Yaml blocks
     // failing that they need to be put in their closest header
