@@ -52,6 +52,9 @@
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="OntologyStructure.fsx" />
     <None Include="markdown-manip.fsx" />
+    <None Include="markdown-dom-creation.fsx" />
+    <None Include="markdown-dom-processor.fsx" />
+    <None Include="markdown-dirty-parsing.fsx" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="mscorlib" />

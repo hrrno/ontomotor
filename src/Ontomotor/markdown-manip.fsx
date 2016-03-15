@@ -59,6 +59,12 @@ type Token =
             | Yaml     (i,c) -> c
             | Property (i,c) -> c
             //| Blank          -> -1
+         member x.Level = 
+            match x with
+            | Root _ -> 0
+            | Header (pos,content) -> content.IndexOf("# ") + 1
+            | Property _ | Yaml _ -> -1
+
             
 type Treez = 
     | Branch of string * list<Treez>
@@ -76,7 +82,11 @@ let compare (first, second) =
     | Root _ -> Gt
     | Header _ -> 
         match second with 
-        | Header _ -> Eq
+        | Header _ -> 
+            match second with
+            | second when first.Level < second.Level -> Gt
+            | second when first.Level > second.Level -> Lt
+            | _ -> Eq
         | _ -> Gt
     | Yaml _ -> 
         match second with 
@@ -248,65 +258,9 @@ reso |> fst |> Seq.head |> print ""
 
 
 
-//let lstcountr ls =
-//    let rec loop ls total = 
-//        match ls with
-//        | [] -> total
-//        | hd::tl -> loop tl total+1I
-//    loop ls 0I
-//
-//
-//let transmorg (comparisons : TokenComparison list) =
-//    let rec loop comp total = 
-//        match ls with
-//        | [] -> total
-//        | hd::tl -> loop tl total+1I
-//    loop ls 0I
-
-
-
-
-/// Build a tree from elements of 'list' that have larger index than 'offset'. As soon
-/// as it finds element below or equal to 'offset', it returns trees found so far
-/// together with unprocessed elements.
-let rec buildTree2 offset trees list = 
-  match list with
-  | [] -> trees, [] // No more elements, return trees collected so far
-  | (x, _)::xs when x <= offset -> 
-      trees, list // The node is below the offset, so we return unprocessed elements
-  | (x, n)::xs ->
-      /// Collect all subtrees from 'xs' that have index larger than 'x'
-      /// (repeatedly call 'buildTree' to find all of them)
-      let rec collectSubTrees xs trees = 
-        match buildTree2 x [] xs with
-        | [], rest -> trees, rest
-        | newtrees, rest -> collectSubTrees rest (trees @ newtrees)
-      let sub, rest = collectSubTrees xs []
-      [Branch(n, sub)], rest
-
-
-
 
 // Trying a new approach: seeding the comparisons with an offset, and using that to govern indentation...
 
-let src = [
-        (0, "root");
-            (1, "a");
-                (2, "a1");
-                (2, "a2");
-            (1, "b");
-                (2, "b1");
-                    (3, "b11");
-                (2, "b2");
-        ]
-let res = buildTree2 -1 [] src
-
-/// A helper that nicely prints a tree
-let rec print depth (Branch(n, sub)) =
-  printfn "%s%s" depth n
-  for s in sub do print (depth + "  ") s
-
-res |> fst |> Seq.head |> print ""
     
 // props first into Yaml blocks
     // failing that they need to be put in their closest header
