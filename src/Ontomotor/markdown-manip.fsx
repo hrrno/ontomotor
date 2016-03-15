@@ -60,8 +60,8 @@ type Token =
             | Property (i,c) -> c
             //| Blank          -> -1
             
-type Tree = 
-    | Branch of string * list<Tree>
+type Treez = 
+    | Branch of string * list<Treez>
   
 type TokenTree = 
     | Node of Token * TokenTree list
@@ -69,6 +69,7 @@ type TokenTree =
 type Comparison = | Gt | Lt | Eq
 type TokenComparison = Comparison * Token
 type TokenComparisonOffset = Comparison * int * Token
+type TokenLevels = int * Token
 
 let compare (first, second) =
     match first with
@@ -207,6 +208,46 @@ let printComparisonsOffset (comparisons : TokenComparisonOffset list) =
 let comparisonsOffset = compareTokenOffset [] document 0
 comparisonsOffset |> printComparisonsOffset
 
+let levels = comparisonsOffset |> List.map (fun (comp, offset, token) -> (offset, token))
+
+
+
+
+/// Build a tree from elements of 'list' that have larger index than 'offset'. As soon
+/// as it finds element below or equal to 'offset', it returns trees found so far
+/// together with unprocessed elements.
+let rec buildTree offset trees list = 
+  match list with
+  | [] -> trees, [] // No more elements, return trees collected so far
+  | (x, _)::xs when x <= offset -> 
+      trees, list // The node is below the offset, so we return unprocessed elements
+  | (x, n)::xs ->
+      /// Collect all subtrees from 'xs' that have index larger than 'x'
+      /// (repeatedly call 'buildTree' to find all of them)
+      let rec collectSubTrees xs trees = 
+        match buildTree x [] xs with
+        | [], rest -> trees, rest
+        | newtrees, rest -> collectSubTrees rest (trees @ newtrees)
+      let sub, rest = collectSubTrees xs []
+      [Node(n, sub)], rest
+
+
+
+let reso = buildTree -1 [] levels
+
+let rec print depth (Node(n, sub)) =
+  printfn "%s%s" depth n.Content
+  for s in sub do print (depth + "  ") s
+
+reso |> fst |> Seq.head |> print ""
+
+
+
+
+
+
+
+
 //let lstcountr ls =
 //    let rec loop ls total = 
 //        match ls with
@@ -228,7 +269,7 @@ comparisonsOffset |> printComparisonsOffset
 /// Build a tree from elements of 'list' that have larger index than 'offset'. As soon
 /// as it finds element below or equal to 'offset', it returns trees found so far
 /// together with unprocessed elements.
-let rec buildTree offset trees list = 
+let rec buildTree2 offset trees list = 
   match list with
   | [] -> trees, [] // No more elements, return trees collected so far
   | (x, _)::xs when x <= offset -> 
@@ -237,7 +278,7 @@ let rec buildTree offset trees list =
       /// Collect all subtrees from 'xs' that have index larger than 'x'
       /// (repeatedly call 'buildTree' to find all of them)
       let rec collectSubTrees xs trees = 
-        match buildTree x [] xs with
+        match buildTree2 x [] xs with
         | [], rest -> trees, rest
         | newtrees, rest -> collectSubTrees rest (trees @ newtrees)
       let sub, rest = collectSubTrees xs []
@@ -258,7 +299,7 @@ let src = [
                     (3, "b11");
                 (2, "b2");
         ]
-let res = buildTree -1 [] src
+let res = buildTree2 -1 [] src
 
 /// A helper that nicely prints a tree
 let rec print depth (Branch(n, sub)) =
