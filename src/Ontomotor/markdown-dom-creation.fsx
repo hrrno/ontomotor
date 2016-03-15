@@ -133,10 +133,16 @@ let root = fromSection {Title="Document Root"} [h1]
 
 
 let document = 
-         [Root (0,"Document Root"); Header (2,"# Foo"); Header (11,"## Bar");
-           Header (21,"## Beans"); Header (33,"## Boo"); Property (51,"Baz: There");
-           Header (65,"## SubObject"); Property (161,"Autoprop: This is an autoprop");
-           Property (194,"Boolprop: true"); Property (212,"Dateprop: 2011-10-10")]
+         [ Root (0,"Document Root"); 
+           Header (2,"# Foo"); 
+           Header (11,"## Bar");
+           Header (21,"## Beans"); 
+           Header (33,"## Boo"); 
+                Property (51,"Baz: There");
+           Header (65,"## SubObject"); 
+                Property (161,"Autoprop: This is an autoprop");
+                Property (194,"Boolprop: true"); 
+                Property (212,"Dateprop: 2011-10-10")]
 
 document |> List.rev
 
@@ -190,17 +196,27 @@ let rec fromDir (dirInfo:DirectoryInfo) =
 
 let rec readChildren (document:Token list) =
     match document with
-    | [] -> MdDom.InternalNode ({Title="Root"}, [] )
+    | [] -> failwith  "nooooo"
+//        printfn "ahoy sailpor\r\n"
+//        MdDom.InternalNode ({Title="Root"}, [] )
+    | [lastToken] -> failwith  "huh"
     | token::xs -> 
         let rec subItems = seq {
+            //yield // MdDom.LeafNode ({Name=token.Content; Content=token.Content}) 
+            
             match token with
-            | Root (i,c) | Header (i,c) -> yield! readChildren xs
-            | Yaml (i,c) | Property (i,c) -> yield! fromProperty { Name = c; Content = c  }
+                //| Root (i,c) | Header (i,c) -> yield readChildren xs
+                
+                | Yaml (i,c) | Property (i,c) -> 
+                    //yield readChildren xs
+                    yield fromProperty { Name = c; Content = c  }
+                | _ -> ()
+            yield readChildren xs                    
         }
         MdDom.InternalNode ({Title=token.Content}, subItems)
             
 
-
+let foo = document |> readChildren
 
 
 
