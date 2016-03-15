@@ -197,27 +197,24 @@ let rec fromDir (dirInfo:DirectoryInfo) =
 let rec readChildren (document:Token list) =
     match document with
     | [] -> failwith  "nooooo"
-//        printfn "ahoy sailpor\r\n"
-//        MdDom.InternalNode ({Title="Root"}, [] )
     | [lastToken] -> failwith  "huh"
     | token::xs -> 
         let rec subItems = seq {
-            //yield // MdDom.LeafNode ({Name=token.Content; Content=token.Content}) 
-            
+            yield readChildren xs     
             match token with
-                //| Root (i,c) | Header (i,c) -> yield readChildren xs
-                
                 | Yaml (i,c) | Property (i,c) -> 
-                    //yield readChildren xs
                     yield fromProperty { Name = c; Content = c  }
                 | _ -> ()
-            yield readChildren xs                    
+                           
         }
         MdDom.InternalNode ({Title=token.Content}, subItems)
             
 
 let foo = document |> readChildren
+foo
 
+
+// 
 
 
 
