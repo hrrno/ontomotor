@@ -34,93 +34,35 @@ open System.IO
 open System.Linq
 open System.Text.RegularExpressions
 
-let testDir = __SOURCE_DIRECTORY__ + "/../data/test/test1/"
-let testFile = testDir + "content-autoprops-tricky.md"
-let md = File.ReadAllText(testFile)
-
-
 type Token = 
     | Root     of position : int * content: string 
     | Header   of position : int * content: string 
     | Yaml     of position : int * content: string
     | Property of position : int * content: string
-    //| Blank
-    with member x.Id = 
+    with member x.Position = 
             match x with
-            | Root     (i,c) -> i
-            | Header   (i,c) -> i
-            | Yaml     (i,c) -> i
-            | Property (i,c) -> i
-            //| Blank          -> -1
+            | Root (i,c) | Header (i,c) 
+            | Yaml (i,c) | Property (i,c) -> i
          member x.Content = 
             match x with
-            | Root     (i,c) -> c
-            | Header   (i,c) -> c
-            | Yaml     (i,c) -> c
-            | Property (i,c) -> c
-            //| Blank          -> -1
+            | Root (i,c) | Header (i,c) 
+            | Yaml (i,c) | Property (i,c) -> c
          member x.Level = 
             match x with
             | Root _ -> 0
             | Header (pos,content) -> content.IndexOf("# ") + 1
             | Property _ | Yaml _ -> -1
 
-            
-type Treez = 
-    | Branch of string * list<Treez>
-  
 type TokenTree = 
     | Node of Token * TokenTree list
 
-type Comparison = | Gt | Lt | Eq
-type TokenComparison = Comparison * Token
-type TokenComparisonOffset = Comparison * int * Token
 type TokenLevels = int * Token
 
-let compare (first, second) =
-    match first with
-    | Root _ -> Gt
-    | Header _ -> 
-        match second with 
-        | Header _ -> 
-            match second with
-            | second when first.Level < second.Level -> Gt
-            | second when first.Level > second.Level -> Lt
-            | _ -> Eq
-        | _ -> Gt
-    | Yaml _ -> 
-        match second with 
-        | Header _ -> Lt
-        | Yaml _ | Property _ -> Eq
-        | _ -> Lt
-    | Property _ ->
-        match second with 
-        | Yaml _ | Property _ -> Eq
-        | _ -> Lt
-        
+let rec printNode depth (Node(n, sub)) =
+  printfn "%s%s" depth (n.Content.Replace("\r\n", "\r\n" + depth))
+  for s in sub do printNode (depth + "   ") s
 
-//let rec compareToken (comparisons : TokenComparison list) (tokens : Token list) : TokenComparison list =
-//    match tokens with
-//    | x::xs when List.isEmpty comparisons -> compareToken [Eq, x] (x::xs)
-//    | x::xs::xss -> compareToken (comparisons @ [(compare (x, xs), xs)]) (xs::xss)
-//    | [_] | []   -> comparisons
-
-let printComparisons (comparisons : TokenComparison list) =
-    for (comp, toke) in comparisons do
-        printf "%A >> %s\r\n" comp toke.Content
-
-let rec printDomOffset (offset : int) (dom : TokenTree list)  =
-    match dom with
-    | (Node(token, sub))::xs ->
-        let indent = System.String('\t', offset)
-        let content = token.Content.Replace("\r\n", "\r\n" + indent)
-        printf "%s%s\r\n" indent content
-        printDomOffset (offset + 1) sub
-        printDomOffset offset xs
-    | [] -> ()
-
-let printDom dom = dom |> printDomOffset 0
-
+let print (node:TokenTree) = printNode "" node
 
 let headerMatches md = Regex.Matches(md, "^(#+)(.*)$",   RegexOptions.Multiline)
 let propMatches   md = Regex.Matches(md, "^(\w+:)(.*)$", RegexOptions.Multiline)
@@ -135,108 +77,6 @@ let makeTokens (makeToken : int * string -> Token) matches =
     |> Seq.toList
 
 
-let headers = md |> headerMatches
-let props   = md |> propMatches
-let yamls   = md |> yamlBlocks
-
-let document = [Root(0, "Document Root")] 
-                 @ makeTokens Header   headers
-                 @ makeTokens Property props   
-                 @ makeTokens Yaml     yamls 
-               |> List.sortBy (fun t -> t.Id)
-
-
-//
-//
-//let rec collectSubtrees parentTree comps subTree  =
-//    match (buildDom comps parentTree) with
-//    | rest, [] -> rest, subTree
-//    | (x::rest),  newtrees -> collectSubtrees parentTree rest (subTree @ newtrees) 
-//    | [] as rest, newtrees -> collectSubtrees parentTree rest (newtrees) 
-//
-//and buildDom (comparisons : TokenComparison list) (parentTree : TokenTree list)  =
-//    match comparisons with
-//    | [] -> [], parentTree
-//    | (Lt, token)::rest -> 
-//        let comps, subtree = collectSubtrees parentTree rest []
-//        comps, (parentTree @ [Node(token, subtree)])
-//    | (Eq, token)::rest -> 
-//        let comps, subtree = collectSubtrees [] rest []
-//        comps, (parentTree @ [Node(token, subtree)])
-//    | (Gt, token)::rest ->
-//        let comps, subtree = collectSubtrees [] rest []
-//        comps, ([Node(token, subtree)])
-//
-//
-//let extractDom comparisons = buildDom comparisons [] |> snd
-//
-//let dom = comparisons |> extractDom
-//comparisons |> printComparisons
-//dom |> printDom
-
-
-
-
-//
-//let comparisonOffset (comparisons : TokenComparison list) =
-//    let mutable offset = 0
-//    [ for (comp, token) in comparisons do
-//        offset <- offsetCalc comp offset
-//        yield (comp, offset, token) ]
-//
-//comparisons |> comparisonOffset
-//
-//let withNr =  
-//    comparisons 
-//    |> List.map (fun (comp, token) -> comp, 0, token )
-//    |> List.map (fun (comp, off, token) -> comp, (offsetCalc comp 0), token)
-
-
-
-// decorate the comparisons with an offsett
-let offsetCalc comp offset =
-    match comp with
-    | Lt -> offset - 1
-    | Eq -> offset
-    | Gt -> offset + 1
-
-
-// replace with a new "offset" calculation which is purely the desired ordinal position
-
-
-
-let rec compareTokenOffset (comparisons : TokenComparisonOffset list) (tokens : Token list) (offset : int) : TokenComparisonOffset list =
-    match tokens with
-    | x::xs when List.isEmpty comparisons -> compareTokenOffset [Eq, 0, x] (x::xs) 0
-    | x::xs::xss -> 
-        let newOffset = (offsetCalc (compare (x, xs)) offset)
-        compareTokenOffset (comparisons @ [(compare (x, xs), newOffset, xs)]) (xs::xss) newOffset
-    | [_] | []   -> comparisons
-
-
-let printComparisonsOffset (comparisons : TokenComparisonOffset list) =
-    for (comp, offset, toke) in comparisons do
-        printf "%A >> %i >> %s\r\n" comp offset toke.Content
-
-
-//let comparisons = compareToken [] document
-let comparisonsOffset = compareTokenOffset [] document 0
-comparisonsOffset |> printComparisonsOffset
-
-//let levels = comparisonsOffset |> List.map (fun (comp, offset, token) -> (offset, token))
-
-
-
-let printLevels (comparisons : TokenLevels list) =
-    for (offset, toke) in comparisons do
-        printf "%i >> %s\r\n" offset toke.Content
-
-let levelCalc comp offset =
-    match comp with
-    | Lt -> offset - 1
-    | Eq -> offset
-    | Gt -> offset + 1
-
 let newLvlCalc (parent:Token) (maybeChild:Token) currOffset =
     match maybeChild with
     | Root _ | Header _ -> maybeChild.Level
@@ -244,7 +84,6 @@ let newLvlCalc (parent:Token) (maybeChild:Token) currOffset =
         match parent with
         | Root _ | Header _ -> parent.Level + 1
         | _ -> currOffset
-
 
 let rec tokenLevels (comparisons : TokenLevels list) (tokens : Token list) (offset : int) : TokenLevels list =
     match tokens with
@@ -254,22 +93,13 @@ let rec tokenLevels (comparisons : TokenLevels list) (tokens : Token list) (offs
         tokenLevels (comparisons @ [(newOffset, xs)]) (xs::xss) newOffset
     | [_] | []   -> comparisons
 
-let levels = tokenLevels [] document 0
-levels |> printLevels
+let hierarchy document = tokenLevels [] document 0
 
-
-
-/// Build a tree from elements of 'list' that have larger index than 'offset'. As soon
-/// as it finds element below or equal to 'offset', it returns trees found so far
-/// together with unprocessed elements.
 let rec buildTree offset trees list = 
   match list with
-  | [] -> trees, [] // No more elements, return trees collected so far
-  | (x, _)::xs when x <= offset -> 
-      trees, list // The node is below the offset, so we return unprocessed elements
+  | [] -> trees, [] 
+  | (x, _)::xs when x <= offset -> trees, list
   | (x, n)::xs ->
-      /// Collect all subtrees from 'xs' that have index larger than 'x'
-      /// (repeatedly call 'buildTree' to find all of them)
       let rec collectSubTrees xs trees = 
         match buildTree x [] xs with
         | [], rest -> trees, rest
@@ -277,31 +107,27 @@ let rec buildTree offset trees list =
       let sub, rest = collectSubTrees xs []
       [Node(n, sub)], rest
 
-
-let reso = buildTree -1 [] levels
-
-let rec print depth (Node(n, sub)) =
-  printfn "%s%s" depth (n.Content.Replace("\r\n", "\r\n" + depth))
-  for s in sub do print (depth + "   ") s
-
-reso |> fst |> Seq.head |> print ""
+let toTree hierarchy = buildTree -1 [] hierarchy
 
 
+let testDir = __SOURCE_DIRECTORY__ + "/../data/test/test1/"
+let testFile = testDir + "content-autoprops-tricky.md"
+let md = File.ReadAllText(testFile)
+
+let headers = md |> headerMatches
+let props   = md |> propMatches
+let yamls   = md |> yamlBlocks
+
+let document = [Root(0, "Document Root")] 
+                 @ makeTokens Header   headers
+                 @ makeTokens Property props   
+                 @ makeTokens Yaml     yamls 
+               |> List.sortBy (fun t -> t.Position)
 
 
+let reso = document |> hierarchy |> toTree
 
-
-
-    
-// props first into Yaml blocks
-    // failing that they need to be put in their closest header
-
-
-
-// Collect the tokens in ordered fashion:
-    // Walk the headers locations
-        // walk the property locations, inserting as required
-        // walk the YAML blocks, inserting as required
+reso |> fst |> Seq.head |> print
 
 
 
