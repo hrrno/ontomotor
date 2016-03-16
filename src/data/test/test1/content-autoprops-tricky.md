@@ -64,6 +64,7 @@ Some loose content
 
 #### Incorrect header level with no content
 
+##### Another incorrect header with no content2
 
 ### Correct header content afterwards
 

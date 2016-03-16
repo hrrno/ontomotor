@@ -35,7 +35,7 @@ open System.Linq
 open System.Text.RegularExpressions
 
 let testDir = __SOURCE_DIRECTORY__ + "/../data/test/test1/"
-let testFile = testDir + "content-autoprops-noyaml.md"
+let testFile = testDir + "content-autoprops-badstructure.md"
 let md = File.ReadAllText(testFile)
 
 
