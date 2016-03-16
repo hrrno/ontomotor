@@ -99,11 +99,11 @@ let compare (first, second) =
         | _ -> Lt
         
 
-let rec compareToken (comparisons : TokenComparison list) (tokens : Token list) : TokenComparison list =
-    match tokens with
-    | x::xs when List.isEmpty comparisons -> compareToken [Eq, x] (x::xs)
-    | x::xs::xss -> compareToken (comparisons @ [(compare (x, xs), xs)]) (xs::xss)
-    | [_] | []   -> comparisons
+//let rec compareToken (comparisons : TokenComparison list) (tokens : Token list) : TokenComparison list =
+//    match tokens with
+//    | x::xs when List.isEmpty comparisons -> compareToken [Eq, x] (x::xs)
+//    | x::xs::xss -> compareToken (comparisons @ [(compare (x, xs), xs)]) (xs::xss)
+//    | [_] | []   -> comparisons
 
 let printComparisons (comparisons : TokenComparison list) =
     for (comp, toke) in comparisons do
@@ -145,36 +145,51 @@ let document = [Root(0, "Document Root")]
                  @ makeTokens Yaml     yamls 
                |> List.sortBy (fun t -> t.Id)
 
-let comparisons = compareToken [] document
+
+//
+//
+//let rec collectSubtrees parentTree comps subTree  =
+//    match (buildDom comps parentTree) with
+//    | rest, [] -> rest, subTree
+//    | (x::rest),  newtrees -> collectSubtrees parentTree rest (subTree @ newtrees) 
+//    | [] as rest, newtrees -> collectSubtrees parentTree rest (newtrees) 
+//
+//and buildDom (comparisons : TokenComparison list) (parentTree : TokenTree list)  =
+//    match comparisons with
+//    | [] -> [], parentTree
+//    | (Lt, token)::rest -> 
+//        let comps, subtree = collectSubtrees parentTree rest []
+//        comps, (parentTree @ [Node(token, subtree)])
+//    | (Eq, token)::rest -> 
+//        let comps, subtree = collectSubtrees [] rest []
+//        comps, (parentTree @ [Node(token, subtree)])
+//    | (Gt, token)::rest ->
+//        let comps, subtree = collectSubtrees [] rest []
+//        comps, ([Node(token, subtree)])
+//
+//
+//let extractDom comparisons = buildDom comparisons [] |> snd
+//
+//let dom = comparisons |> extractDom
+//comparisons |> printComparisons
+//dom |> printDom
 
 
-let rec collectSubtrees parentTree comps subTree  =
-    match (buildDom comps parentTree) with
-    | rest, [] -> rest, subTree
-    | (x::rest),  newtrees -> collectSubtrees parentTree rest (subTree @ newtrees) 
-    | [] as rest, newtrees -> collectSubtrees parentTree rest (newtrees) 
-
-and buildDom (comparisons : TokenComparison list) (parentTree : TokenTree list)  =
-    match comparisons with
-    | [] -> [], parentTree
-    | (Lt, token)::rest -> 
-        let comps, subtree = collectSubtrees parentTree rest []
-        comps, (parentTree @ [Node(token, subtree)])
-    | (Eq, token)::rest -> 
-        let comps, subtree = collectSubtrees [] rest []
-        comps, (parentTree @ [Node(token, subtree)])
-    | (Gt, token)::rest ->
-        let comps, subtree = collectSubtrees [] rest []
-        comps, ([Node(token, subtree)])
 
 
-let extractDom comparisons = buildDom comparisons [] |> snd
-
-let dom = comparisons |> extractDom
-comparisons |> printComparisons
-dom |> printDom
-
-
+//
+//let comparisonOffset (comparisons : TokenComparison list) =
+//    let mutable offset = 0
+//    [ for (comp, token) in comparisons do
+//        offset <- offsetCalc comp offset
+//        yield (comp, offset, token) ]
+//
+//comparisons |> comparisonOffset
+//
+//let withNr =  
+//    comparisons 
+//    |> List.map (fun (comp, token) -> comp, 0, token )
+//    |> List.map (fun (comp, off, token) -> comp, (offsetCalc comp 0), token)
 
 
 
@@ -185,18 +200,8 @@ let offsetCalc comp offset =
     | Eq -> offset
     | Gt -> offset + 1
 
-let comparisonOffset (comparisons : TokenComparison list) =
-    let mutable offset = 0
-    [ for (comp, token) in comparisons do
-        offset <- offsetCalc comp offset
-        yield (comp, offset, token) ]
 
-comparisons |> comparisonOffset
-
-let withNr =  
-    comparisons 
-    |> List.map (fun (comp, token) -> comp, 0, token )
-    |> List.map (fun (comp, off, token) -> comp, (offsetCalc comp 0), token)
+// replace with a new "offset" calculation which is purely the desired ordinal position
 
 
 
@@ -204,10 +209,9 @@ let rec compareTokenOffset (comparisons : TokenComparisonOffset list) (tokens : 
     match tokens with
     | x::xs when List.isEmpty comparisons -> compareTokenOffset [Eq, 0, x] (x::xs) 0
     | x::xs::xss -> 
-        let offsetDelta = (offsetCalc (compare (x, xs)) offset)
-        compareTokenOffset (comparisons @ [(compare (x, xs), offsetDelta, xs)]) (xs::xss) offsetDelta
+        let newOffset = (offsetCalc (compare (x, xs)) offset)
+        compareTokenOffset (comparisons @ [(compare (x, xs), newOffset, xs)]) (xs::xss) newOffset
     | [_] | []   -> comparisons
-
 
 
 let printComparisonsOffset (comparisons : TokenComparisonOffset list) =
@@ -215,11 +219,43 @@ let printComparisonsOffset (comparisons : TokenComparisonOffset list) =
         printf "%A >> %i >> %s\r\n" comp offset toke.Content
 
 
+//let comparisons = compareToken [] document
 let comparisonsOffset = compareTokenOffset [] document 0
 comparisonsOffset |> printComparisonsOffset
 
-let levels = comparisonsOffset |> List.map (fun (comp, offset, token) -> (offset, token))
+//let levels = comparisonsOffset |> List.map (fun (comp, offset, token) -> (offset, token))
 
+
+
+let printLevels (comparisons : TokenLevels list) =
+    for (offset, toke) in comparisons do
+        printf "%i >> %s\r\n" offset toke.Content
+
+let levelCalc comp offset =
+    match comp with
+    | Lt -> offset - 1
+    | Eq -> offset
+    | Gt -> offset + 1
+
+let newLvlCalc (parent:Token) (maybeChild:Token) currOffset =
+    match maybeChild with
+    | Root _ | Header _ -> maybeChild.Level
+    | Yaml _ | Property _ ->
+        match parent with
+        | Root _ | Header _ -> parent.Level + 1
+        | _ -> currOffset
+
+
+let rec tokenLevels (comparisons : TokenLevels list) (tokens : Token list) (offset : int) : TokenLevels list =
+    match tokens with
+    | x::xs when comparisons.IsEmpty -> tokenLevels [0, x] (x::xs) 0
+    | x::xs::xss -> 
+        let newOffset = newLvlCalc x xs offset
+        tokenLevels (comparisons @ [(newOffset, xs)]) (xs::xss) newOffset
+    | [_] | []   -> comparisons
+
+let levels = tokenLevels [] document 0
+levels |> printLevels
 
 
 
@@ -242,7 +278,6 @@ let rec buildTree offset trees list =
       [Node(n, sub)], rest
 
 
-
 let reso = buildTree -1 [] levels
 
 let rec print depth (Node(n, sub)) =
@@ -250,11 +285,6 @@ let rec print depth (Node(n, sub)) =
   for s in sub do print (depth + "  ") s
 
 reso |> fst |> Seq.head |> print ""
-
-
-
-
-
 
 
 
