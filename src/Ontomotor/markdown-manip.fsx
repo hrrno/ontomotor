@@ -35,7 +35,7 @@ open System.Linq
 open System.Text.RegularExpressions
 
 let testDir = __SOURCE_DIRECTORY__ + "/../data/test/test1/"
-let testFile = testDir + "content-autoprops-badstructure.md"
+let testFile = testDir + "content-autoprops-tricky.md"
 let md = File.ReadAllText(testFile)
 
 
@@ -281,15 +281,16 @@ let rec buildTree offset trees list =
 let reso = buildTree -1 [] levels
 
 let rec print depth (Node(n, sub)) =
-  printfn "%s%s" depth n.Content
-  for s in sub do print (depth + "  ") s
+  printfn "%s%s" depth (n.Content.Replace("\r\n", "\r\n" + depth))
+  for s in sub do print (depth + "   ") s
 
 reso |> fst |> Seq.head |> print ""
 
 
 
 
-// Trying a new approach: seeding the comparisons with an offset, and using that to govern indentation...
+
+
 
     
 // props first into Yaml blocks
