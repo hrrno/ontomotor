@@ -8,11 +8,6 @@
 
 // Grab the props
 
-    // Headers at all levels
-        // "incorrect" indentation (ie H4 under H2), should be amalgomated as though it were of an appropriate header
-        // eg H1 -> H2 -> H4 & H3 should present like H1 -> H2 -> H3 & H3
-        // eg # Foo; ## Bar; #### Baz; ### Zab => Foo.Bar.Baz & Foo.Bar.Zab
-
     // Loose content 
         // Create an .InnerText prop that lets you dump all content including autoprops
         // Collect all content that isnt in props as .Content (?)
@@ -33,6 +28,7 @@
 open System.IO
 open System.Linq
 open System.Text.RegularExpressions
+
 
 type Token = 
     | Root     of position : int * content: string 
@@ -77,19 +73,19 @@ let makeTokens (makeToken : int * string -> Token) matches =
     |> Seq.toList
 
 
-let newLvlCalc (parent:Token) (maybeChild:Token) currOffset =
-    match maybeChild with
-    | Root _ | Header _ -> maybeChild.Level
+let calcOffset (preceding:Token) (current:Token) currOffset =
+    match current with
+    | Root _ | Header _ -> current.Level
     | Yaml _ | Property _ ->
-        match parent with
-        | Root _ | Header _ -> parent.Level + 1
+        match preceding with
+        | Root _ | Header _ -> preceding.Level + 1
         | _ -> currOffset
 
-let rec tokenLevels (comparisons : TokenLevels list) (tokens : Token list) (offset : int) : TokenLevels list =
+let rec tokenLevels (comparisons:TokenLevels list) (tokens:Token list) (offset:int) : TokenLevels list =
     match tokens with
     | x::xs when comparisons.IsEmpty -> tokenLevels [0, x] (x::xs) 0
     | x::xs::xss -> 
-        let newOffset = newLvlCalc x xs offset
+        let newOffset = calcOffset x xs offset
         tokenLevels (comparisons @ [(newOffset, xs)]) (xs::xss) newOffset
     | [_] | []   -> comparisons
 
@@ -107,7 +103,7 @@ let rec buildTree offset trees list =
       let sub, rest = collectSubTrees xs []
       [Node(n, sub)], rest
 
-let toTree hierarchy = buildTree -1 [] hierarchy
+let toTree hierarchy = buildTree -1 [] hierarchy |> fst
 
 
 let testDir = __SOURCE_DIRECTORY__ + "/../data/test/test1/"
@@ -127,7 +123,7 @@ let document = [Root(0, "Document Root")]
 
 let reso = document |> hierarchy |> toTree
 
-reso |> fst |> Seq.head |> print
+reso |> Seq.head |> print
 
 
 
@@ -135,7 +131,4 @@ reso |> fst |> Seq.head |> print
     // Provide a unified type for all files in the collection for loops
     // Perhaps add a downcast operator to get the raw, unrestricted, manifestation of the file?
         // ie GroupObj.Explicit runs the provider on a single file, with only those props...
-
-
-
 
