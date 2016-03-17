@@ -26,105 +26,115 @@
 
 
 open System.IO
-open System.Linq
 open System.Text.RegularExpressions
 
 
-type Token = 
-    | Root     of position : int * content: string 
-    | Header   of position : int * content: string 
-    | Yaml     of position : int * content: string
-    | Property of position : int * content: string
-    with member x.Position = 
-            match x with
-            | Root (i,c) | Header (i,c) 
-            | Yaml (i,c) | Property (i,c) -> i
-         member x.Content = 
-            match x with
-            | Root (i,c) | Header (i,c) 
-            | Yaml (i,c) | Property (i,c) -> c
-         member x.Level = 
-            match x with
-            | Root _ -> 0
-            | Header (pos,content) -> content.IndexOf("# ") + 1
-            | Property _ | Yaml _ -> -1
+module Tokenizer =
 
-type TokenTree = 
-    | Node of Token * TokenTree list
+    type Token = 
+        | Root     of position : int * content: string 
+        | Header   of position : int * content: string 
+        | Yaml     of position : int * content: string
+        | Property of position : int * content: string
+        with member x.Position = 
+                match x with
+                | Root (i,c) | Header (i,c) 
+                | Yaml (i,c) | Property (i,c) -> i
+             member x.Content = 
+                match x with
+                | Root (i,c) | Header (i,c) 
+                | Yaml (i,c) | Property (i,c) -> c
+             member x.Level = 
+                match x with
+                | Root _ -> 0
+                | Header (pos,content) -> content.IndexOf("# ") + 1
+                | Property _ | Yaml _ -> -1
 
-type TokenLevels = int * Token
+    type TokenTree = 
+        | Node of Token * TokenTree list
 
-let rec printNode depth (Node(n, sub)) =
-  printfn "%s%s" depth (n.Content.Replace("\r\n", "\r\n" + depth))
-  for s in sub do printNode (depth + "   ") s
+    let rec private printNode depth (Node(n, sub)) =
+      printfn "%s%s" depth (n.Content.Replace("\r\n", "\r\n" + depth))
+      for s in sub do printNode (depth + "   ") s
 
-let print (node:TokenTree) = printNode "" node
+    let print (node:TokenTree) = printNode "" node
 
-let headerMatches md = Regex.Matches(md, "^(#+)(.*)$",   RegexOptions.Multiline)
-let propMatches   md = Regex.Matches(md, "^(\w+:)(.*)$", RegexOptions.Multiline)
-let yamlBlocks    md = Regex.Matches(md, "---(.*?)---",  RegexOptions.Singleline)
-
-let captures (matches : MatchCollection) = seq { for m in matches do yield m.Captures.[0] } 
-
-let makeTokens (makeToken : int * string -> Token) matches = 
-    matches 
-    |> captures 
-    |> Seq.map (fun c -> makeToken(c.Index, c.Value.Trim()))
-    |> Seq.toList
+    type TokenTree with member x.Print = print x
 
 
-let calcOffset (preceding:Token) (current:Token) currOffset =
-    match current with
-    | Root _ | Header _ -> current.Level
-    | Yaml _ | Property _ ->
-        match preceding with
-        | Root _ | Header _ -> preceding.Level + 1
-        | _ -> currOffset
+module Lexer =
 
-let rec tokenLevels (comparisons:TokenLevels list) (tokens:Token list) (offset:int) : TokenLevels list =
-    match tokens with
-    | x::xs when comparisons.IsEmpty -> tokenLevels [0, x] (x::xs) 0
-    | x::xs::xss -> 
-        let newOffset = calcOffset x xs offset
-        tokenLevels (comparisons @ [(newOffset, xs)]) (xs::xss) newOffset
-    | [_] | []   -> comparisons
+    open Tokenizer
 
-let hierarchy document = tokenLevels [] document 0
+    type TokenLevels = int * Token
 
-let rec buildTree offset trees list = 
-  match list with
-  | [] -> trees, [] 
-  | (x, _)::xs when x <= offset -> trees, list
-  | (x, n)::xs ->
-      let rec collectSubTrees xs trees = 
-        match buildTree x [] xs with
-        | [], rest -> trees, rest
-        | newtrees, rest -> collectSubTrees rest (trees @ newtrees)
-      let sub, rest = collectSubTrees xs []
-      [Node(n, sub)], rest
+    let private calcOffset (preceding:Token) (current:Token) currOffset =
+        match current with
+        | Root _ | Header _ -> current.Level
+        | Yaml _ | Property _ ->
+            match preceding with
+            | Root _ | Header _ -> preceding.Level + 1
+            | _ -> currOffset
 
-let toTree hierarchy = buildTree -1 [] hierarchy |> fst
+    let rec private tokenLevels (comparisons:TokenLevels list) (tokens:Token list) (offset:int) : TokenLevels list =
+        match tokens with
+        | x::xs when comparisons.IsEmpty -> 
+            tokenLevels [0, x] (x::xs) 0
+        | x::xs::xss -> 
+            let newOffset = calcOffset x xs offset
+            tokenLevels (comparisons @ [(newOffset, xs)]) (xs::xss) newOffset
+        | [_] | []   -> comparisons
 
+    let rec private buildTree offset trees list = 
+      match list with
+      | [] -> trees, [] 
+      | (level, _)::xs when level <= offset -> trees, list
+      | (level, token)::xs ->
+          let rec collectSubTrees xs trees = 
+            match buildTree level [] xs with
+            | [], rest -> trees, rest
+            | newtrees, rest -> collectSubTrees rest (trees @ newtrees)
+          let sub, rest = collectSubTrees xs []
+          [Node(token, sub)], rest
+
+    let hierarchy tokens = tokenLevels [] tokens 0
+
+    let toTree hierarchy = buildTree -1 [] hierarchy |> fst |> Seq.head
+
+
+module Parser =
+
+    open Tokenizer
+    open Lexer
+
+    let private captures (matches : MatchCollection) = seq { for m in matches do yield m.Captures.[0] } 
+
+    let private makeTokens (makeToken : int * string -> Token) matches = 
+        matches 
+        |> captures 
+        |> Seq.map (fun c -> makeToken(c.Index, c.Value.Trim()))
+        |> Seq.toList
+
+    let private headerMatches md = Regex.Matches(md, "^(#+)(.*)$",   RegexOptions.Multiline)
+    let private propMatches   md = Regex.Matches(md, "^(\w+:)(.*)$", RegexOptions.Multiline)
+    let private yamlBlocks    md = Regex.Matches(md, "---(.*?)---",  RegexOptions.Singleline)
+
+    let parse md =
+            [ Root(0, "Document Root") ] 
+              @ makeTokens Header   (md |> headerMatches)
+              @ makeTokens Property (md |> propMatches)   
+              @ makeTokens Yaml     (md |> yamlBlocks) 
+            |> List.sortBy (fun t -> t.Position)
+            |> hierarchy 
+            |> toTree
+
+    let parseFile path = parse <| File.ReadAllText(path)
+        
 
 let testDir = __SOURCE_DIRECTORY__ + "/../data/test/test1/"
-let testFile = testDir + "content-autoprops-tricky.md"
-let md = File.ReadAllText(testFile)
+let reso = Parser.parseFile(testDir + "content-autoprops-badstructure.md")
 
-let headers = md |> headerMatches
-let props   = md |> propMatches
-let yamls   = md |> yamlBlocks
-
-let document = [Root(0, "Document Root")] 
-                 @ makeTokens Header   headers
-                 @ makeTokens Property props   
-                 @ makeTokens Yaml     yamls 
-               |> List.sortBy (fun t -> t.Position)
-
-
-let reso = document |> hierarchy |> toTree
-
-reso |> Seq.head |> print
-
+reso.Print 
 
 
 // Load files as a collection
