@@ -293,7 +293,15 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
                             InvokeCode = fun [filename] -> <@@ new MarkdownFile(%%filename) @@>))
 
 
+            let instanceProp = 
+                ProvidedProperty(propertyName = "Filename", 
+                                 propertyType = typeof<string>, 
+                                 GetterCode= (fun args -> 
+                                                 <@@ filename' @@>))
 
+            instanceProp.AddXmlDocDelayed(fun () -> "This is a generated instance property")
+            // Add the instance property to the type.
+            ty.AddMember instanceProp 
 //            // define a provided type for each row, erasing to a Value seq
 //            let tyObservation = ProvidedTypeDefinition("Observation", Some typeof<Value seq>)
 //       
@@ -319,12 +327,13 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
 //            // add the row type as a nested type
 //            ty.AddMember tyObservation
 
+
             ty.AddXmlDocDelayed (fun () -> sprintf "Provided type '%s'" mdFileTypeProviderName)
             ty
             )
         [ tyMarkdownFile ]
 
-    do this.AddNamespace(ns, createTypes())
+    do this.AddNamespace(Helpers.namespaceName, createTypes())
 
                             
 [<assembly:TypeProviderAssembly>] 
