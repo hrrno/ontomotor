@@ -105,22 +105,30 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
 
                             
             let rec propGen (parentTy:ProvidedTypeDefinition) (Node(node,sub)) =
-                let newTy = ProvidedTypeDefinition("NestedType_" + node.Title, Some typeof<obj>)
-
+                let newTy = ProvidedTypeDefinition("NestedType_" + node.Title, Some typeof<obj>, HideObjectMethods = true, IsErased = false)
+                newTy.AddMember(ProvidedConstructor([], InvokeCode = fun [] -> <@@ new System.Object() @@>))
                 
+                let title = node.Title
                 let memberProp = 
                     ProvidedProperty(propertyName = "Title", 
                                      propertyType = typeof<string>, 
-                                     GetterCode = (fun args -> <@@ node.Title @@>))
+                                     GetterCode = (fun args -> <@@ title @@>))
 
-                newTy.AddMember memberProp
-
+                newTy.AddMember(memberProp)
+                
                 newTy.AddMembers([ for n in sub do propGen newTy n ])
-                parentTy.AddMember(newTy)
+                
+                let subProp = 
+                    ProvidedProperty(propertyName = node.Title, 
+                                     propertyType = typeof<obj>, 
+                                     GetterCode = (fun args -> <@@ newTy @@>))
+
+                //parentTy.AddMemberDelayed(fun () -> newTy)
+                parentTy.AddMemberDelayed(fun () -> subProp)
 
             let tree = Parse.file filename' 
             tree |> propGen ty
-
+            let title = tree.Token.Title
 
             let instanceProp = 
                 ProvidedProperty(propertyName = "BlehBleh", 
@@ -129,13 +137,11 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
                                                  <@@ filename' @@>))
 
 
-
-
             let instanceProp2 = 
                 ProvidedProperty(propertyName = "FoundItem", 
                                  propertyType = typeof<string>, 
                                  GetterCode = (fun args -> 
-                                                 <@@ tree.Token.Title @@>))
+                                                 <@@ title @@>))
 
             instanceProp.AddXmlDocDelayed(fun () -> "This is a generated instance property")
             // Add the instance property to the type.
