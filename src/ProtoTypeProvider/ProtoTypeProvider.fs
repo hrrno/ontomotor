@@ -41,22 +41,26 @@ namespace ProtoType
 
 open System
 open System.Reflection
-open Samples.FSharp.ProvidedTypes
+open ProviderImplementation.ProvidedTypes
 open Microsoft.FSharp.Core.CompilerServices
 open Microsoft.FSharp.Quotations
 
 
-module BasicTypeMaker = 
+module Helpers =
 
     let namespaceName = "Proto.TypeProvider"
     let thisAssembly = Assembly.GetExecutingAssembly()
+
+
+module BasicTypeMaker = 
+
 
     // Make one provided type, called TypeN
     let makeOneProvidedType (n:int) = 
 
         // This is the provided type. It is an erased provided type, and in compiled code 
         // will appear as type 'obj'.
-        let t = ProvidedTypeDefinition(thisAssembly,namespaceName,
+        let t = ProvidedTypeDefinition(Helpers.thisAssembly,Helpers.namespaceName,
                                        "Type" + string n,
                                        baseType = Some typeof<obj>)
 
@@ -200,6 +204,12 @@ module BasicTypeMaker =
         t
 
 
+
+type MarkdownFile (filename) =
+    let name = filename
+    let Hey = "yo"
+
+
 // This defines the type provider. When compiled to a DLL it can be added as a reference to an F#
 // command-line compilation, script or project.
 [<TypeProvider>]
@@ -208,13 +218,114 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
     // Inheriting from this type provides implementations of ITypeProvider in terms of the
     // provided types below.
     inherit TypeProviderForNamespaces()
+//
+//    let markdownProvTy = ProvidedTypeDefinition(Helpers.thisAssembly, Helpers.namespaceName,
+//                                "MarkdownFile",
+//                                baseType = Some typeof<obj>, HideObjectMethods = true)
+//
+//
+//    let buildTypes (typeName:string) (args:obj[]) =
+//
+//        let path = args.[0] :?> string
+//        
+//        if path = "" then failwith "The file path parameter cannot be empty"
+//
+//
+//
+//    // Add static parameter that specifies the API we want to get (compile-time) 
+//    let parameters = 
+//        [ ProvidedStaticParameter("FilePath", typeof<string>, parameterDefaultValue = "") ]
+//
+//    let helpText = 
+//        """<summary>A typed representation of a Markdown file.</summary>
+//            <param name='FilePath'>Location of the markdown file to create.</param>"""
 
 
-    // Now generate 100 types
-    let types = [ for i in 1 .. 100 -> BasicTypeMaker.makeOneProvidedType i ] 
+    //do markdownProvTy.AddXmlDoc helpText
+    //do markdownProvTy.DefineStaticParameters (parameters, buildTypes)
+    
+//
 
-    // And add them to the namespace
-    do this.AddNamespace(BasicTypeMaker.namespaceName, types)
+
+    // this is working just fine...
+
+    let types = [ for i in 1 .. 4 -> BasicTypeMaker.makeOneProvidedType i ] 
+    do this.AddNamespace(Helpers.namespaceName, types)
+
+
+    // this is throwing object not found for whatever reason...
+
+    
+    let ns = "Proto.TypeProvider"
+    let asm = Assembly.GetExecutingAssembly()
+    let mdFileTypeProviderName = "MarkdownFileTypeProvider"
+    let mdLibraryTypeProviderName = "MarkdownLibraryTypeProvider"
+
+    let createTypes () =
+        // Create the main provided type
+        let tyMarkdownFile = ProvidedTypeDefinition(asm, ns, mdFileTypeProviderName, None)
+
+        // Parameterize the type by the file to use as a template
+        let filename = ProvidedStaticParameter("filename", typeof<string>)
+
+        tyMarkdownFile.DefineStaticParameters(
+            [filename], fun tyName [| :? string as filename |] ->
+
+            let filename' =
+                if not <| System.IO.File.Exists filename then
+                    // resolve the filename relative to the resolution folder
+                    let resolvedFilename = System.IO.Path.Combine(config.ResolutionFolder, filename)
+                    if not <| System.IO.File.Exists resolvedFilename then
+                        failwithf "File '%s' not found" resolvedFilename
+                    resolvedFilename
+                else
+                    filename 
+
+            // define the provided type, erasing to SasFile
+            let ty = ProvidedTypeDefinition(asm, ns, tyName, Some typeof<MarkdownFile>)
+
+            // add a parameterless constructor which loads the file that was used to define the schema
+            ty.AddMember(ProvidedConstructor([], InvokeCode = fun [] -> <@@ new MarkdownFile(filename') @@>))
+
+            // add a constructor taking the filename to load
+            ty.AddMember(ProvidedConstructor(
+                            [ProvidedParameter("filename", typeof<string>)],
+                            InvokeCode = fun [filename] -> <@@ new MarkdownFile(%%filename) @@>))
+
+
+
+//            // define a provided type for each row, erasing to a Value seq
+//            let tyObservation = ProvidedTypeDefinition("Observation", Some typeof<Value seq>)
+//       
+//            // read SAS schema
+//            use sasFile = new SasFile(filename')
+//
+//            // add one property per SAS variable
+//            sasFile.MetaData.Columns
+//            |> Seq.map (fun col ->
+//                let i = col.Ordinal - 1 
+//                ProvidedProperty(col.Name, typeof<Value>,
+//                    GetterCode = fun [values] ->
+//                                    <@@ (Seq.nth i (%%values: Value seq) ) @@> ) 
+//                )
+//            |> Seq.toList
+//            |> tyObservation.AddMembers
+//
+//            // add a new, more strongly typed Data property (which uses the existing property at runtime)
+//            ty.AddMember(ProvidedProperty(
+//                            "Observations", typedefof<seq<_>>.MakeGenericType(tyObservation),
+//                            GetterCode = fun [sasFile] -> <@@ (%%sasFile: SasFile).Rows @@>))
+//
+//            // add the row type as a nested type
+//            ty.AddMember tyObservation
+
+            ty.AddXmlDocDelayed (fun () -> sprintf "Provided type '%s'" mdFileTypeProviderName)
+            ty
+            )
+        [ tyMarkdownFile ]
+
+    do this.AddNamespace(ns, createTypes())
+
                             
 [<assembly:TypeProviderAssembly>] 
 do()
