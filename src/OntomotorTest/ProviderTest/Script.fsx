@@ -9,8 +9,11 @@
 
 
 let f = @"C:\proj\ontomotor\src\data\test\test1\content-autoprops-simple.md"
---let foo = new Proto.TypeProvider.MarkdownFileTypeProvider<"""C:\proj\ontomotor\src\data\test\test1\content-autoprops-simple.md""">()
+--let foo = new Proto.TypeProvider.MarkdownFile<"""C:\proj\ontomotor\src\data\test\test1\content-autoprops-simple.md""">()
+foo.BlehBleh
 foo.Filename
+foo.Location
+
 //let g = new Proto.TypeProvider.Type1
 //let o2 = new Proto.TypeProvider.MarkdownFileTypeProvider<"ha">()
 //let o1 = new Proto.TypeProvider.MarkdownFileTypeProvider<"""C:\proj\ontomotor\src\data\test\test1\content-autoprops-simple.md""">()

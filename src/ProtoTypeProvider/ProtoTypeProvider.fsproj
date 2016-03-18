@@ -39,8 +39,13 @@
     <Compile Include="..\..\paket-files\fsprojects\FSharp.TypeProviders.StarterPack\src\DebugProvidedTypes.fs">
       <Link>DebugProvidedTypes.fs</Link>
     </Compile>
-    <Compile Include="ProtoTypeProvider.fs" />
+    <Compile Include="Example.fs" />
+    <Compile Include="..\Ontomotor\MarkdownParser.fs">
+      <Link>MarkdownParser.fs</Link>
+    </Compile>
+    <Compile Include="MarkdownFile.fs" />
     <None Include="test.fsx" />
+    <Compile Include="ProtoTypeProvider.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="FSharp.Core, Version=$(TargetFSharpCoreVersion), Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
