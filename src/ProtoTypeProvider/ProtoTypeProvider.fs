@@ -72,7 +72,7 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
     let mdFileTypeProviderName = "MarkdownFile"
 
 
-    let createTypes () =
+    let createMainTypes () =
         // Create the main provided type
         let tyMarkdownFile = ProvidedTypeDefinition(asm, ns, mdFileTypeProviderName, None)
 
@@ -106,47 +106,57 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
                             
             let rec propGen (parentTy:ProvidedTypeDefinition) (Node(node,sub)) =
                 let newTy = ProvidedTypeDefinition("NestedType_" + node.Title, Some typeof<obj>, HideObjectMethods = true, IsErased = false)
-                newTy.AddMember(ProvidedConstructor([], InvokeCode = fun [] -> <@@ new System.Object() @@>))
+                //newTy.AddMember(ProvidedConstructor([], InvokeCode = fun [] -> <@@ new System.Object() @@>))
                 
                 let title = node.Title
                 let memberProp = 
                     ProvidedProperty(propertyName = "Title", 
                                      propertyType = typeof<string>, 
+                                     IsStatic = true,
                                      GetterCode = (fun args -> <@@ title @@>))
 
                 newTy.AddMember(memberProp)
                 
-                newTy.AddMembers([ for n in sub do propGen newTy n ])
+                //newTy.AddMembers([ 
                 
-                let subProp = 
-                    ProvidedProperty(propertyName = node.Title, 
-                                     propertyType = typeof<obj>, 
-                                     GetterCode = (fun args -> <@@ newTy @@>))
+                for n in sub do 
+                    propGen newTy n //])
+                
+//                let subProp = 
+//                    ProvidedProperty(propertyName = node.Title, 
+//                                     propertyType = typeof<obj>, 
+//                                     IsStatic = true,
+//                                     GetterCode = (fun args -> <@@ newTy @@>))
 
-                //parentTy.AddMemberDelayed(fun () -> newTy)
-                parentTy.AddMemberDelayed(fun () -> subProp)
+                parentTy.AddMemberDelayed(fun () -> newTy)
+                //parentTy.AddMemberDelayed ()  //Delayed(fun () -> subProp)
 
             let tree = Parse.file filename' 
             tree |> propGen ty
-            let title = tree.Token.Title
-
-            let instanceProp = 
-                ProvidedProperty(propertyName = "BlehBleh", 
-                                 propertyType = typeof<string>, 
-                                 GetterCode = (fun args -> 
-                                                 <@@ filename' @@>))
 
 
-            let instanceProp2 = 
-                ProvidedProperty(propertyName = "FoundItem", 
-                                 propertyType = typeof<string>, 
-                                 GetterCode = (fun args -> 
-                                                 <@@ title @@>))
+            
 
-            instanceProp.AddXmlDocDelayed(fun () -> "This is a generated instance property")
-            // Add the instance property to the type.
-            ty.AddMember instanceProp 
-            ty.AddMember instanceProp2 
+
+//            let title = tree.Token.Title
+
+//            let instanceProp = 
+//                ProvidedProperty(propertyName = "BlehBleh", 
+//                                 propertyType = typeof<string>, 
+//                                 GetterCode = (fun args -> 
+//                                                 <@@ filename' @@>))
+//
+//
+//            let instanceProp2 = 
+//                ProvidedProperty(propertyName = "FoundItem", 
+//                                 propertyType = typeof<string>, 
+//                                 GetterCode = (fun args -> 
+//                                                 <@@ title @@>))
+
+//            instanceProp.AddXmlDocDelayed(fun () -> "This is a generated instance property")
+//            // Add the instance property to the type.
+//            ty.AddMember instanceProp 
+//            ty.AddMember instanceProp2 
 
 
 
@@ -185,7 +195,28 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
             )
         [ tyMarkdownFile ]
 
-    do this.AddNamespace(Helpers.namespaceName, createTypes())
+
+    //let baseType = Some typeof<obj>
+    //let ns = "Word.TypeProvider"
+    //let asm = Assembly.GetExecutingAssembly()
+    let alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+    let rec createTypes wordSoFar =
+        alphabet
+        |> Seq.map (fun t -> let newChar = t |> string
+                             let newWord = wordSoFar + newChar
+                             let ty = ProvidedTypeDefinition(newChar, None)
+                             ty.AddMembersDelayed(fun () -> createTypes newWord)
+                             let wordProp = ProvidedProperty("Word", typeof<string>, IsStatic=true, GetterCode = fun args -> <@@ newWord @@>)
+                             ty.AddMember(wordProp)
+                             ty)
+        |> Seq.toList
+
+    let rootType = ProvidedTypeDefinition(asm, ns, "StartHere", None)
+    do rootType.AddMembersDelayed(fun () -> createTypes "")
+    do this.AddNamespace(ns, [rootType])
+
+    do this.AddNamespace(Helpers.namespaceName, createMainTypes())
 
                             
 [<assembly:TypeProviderAssembly>] 
