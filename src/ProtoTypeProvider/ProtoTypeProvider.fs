@@ -85,6 +85,15 @@ module private NodeInstance =
         { Node = name; InstanceId = id; Config = config }
 
 
+type MdDomEl =
+    { Title: string; }
+
+module MdDom =
+    let create name =
+        { Title = name } 
+
+
+
 [<TypeProvider>]
 type ProtoTypeProvider(config: TypeProviderConfig) as this = 
     inherit TypeProviderForNamespaces()
@@ -94,43 +103,9 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
     let mdFileTypeProviderName = "MarkdownFile"
 
 
-    let createNodeType name =
-        let nodeType = ProvidedTypeDefinition(name, Some typeof<nodeInstance>) /// somewhere in here I`m getting errors, need to send in parent type?
-                                                                                        // might just have to delete the namespace and let it go in as `simple`...
-        let ctor = ProvidedConstructor(
-                    [
-                        ProvidedParameter("Name", typeof<string>)
-                        ProvidedParameter("UniqueId", typeof<string>)
-                        ProvidedParameter("Config", typeof<string>)
-                    ],
-                    InvokeCode = fun [name;id;config] -> <@@ NodeInstance.create (%%name:string) (%%id:string) (%%config:string) @@>)
-        nodeType.AddMember(ctor)
-
-        let outputs = ProvidedTypeDefinition("Outputs", Some typeof<obj>)
-        let outputCtor = ProvidedConstructor([], InvokeCode = fun args -> <@@ obj() @@>)
-        outputs.AddMember(outputCtor)
-        outputs.HideObjectMethods <- true
-
-        //addOutputPort outputs "zzzzom"
-
-//                addPorts inputs outputs node.Ports
-
-        // Add the inputs and outputs types of nested types under the Node type
-        nodeType.AddMembers([outputs])
-
-        // Now add some instance properties to expose them on a node instance.
-        let outputPorts = ProvidedProperty("OutputPorts", outputs, [],GetterCode = fun args -> <@@ obj() @@>)
-        nodeType.AddMembers([outputPorts])
-        nodeType
-
     let createMainTypes =
-        // Create the main provided type
         let tyMarkdownFile = ProvidedTypeDefinition(asm, ns, mdFileTypeProviderName, Some typeof<MarkdownFile>)
-
-        // Parameterize the type by the file to use as a template
         let filename = ProvidedStaticParameter("filename", typeof<string>)
-
-        //tyMarkdownFile.
 
         tyMarkdownFile.DefineStaticParameters(
             [filename], fun tyName [| :? string as filename |] ->
@@ -154,22 +129,42 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
 
 
             // add child prop with value or two...
-            let tree = Parse.file filename' 
+            let tree = Parse.file filename' //|> Seq.head
 
 
-            let container = ProvidedTypeDefinition("treeContainer", Some typeof<MarkdownDomElement>)
-            let membbrrr = ProvidedProperty(propertyName = "treeeee", 
-                                            propertyType = container, 
-                                            GetterCode = fun args -> <@@ MarkdownDom.create "onetwothree" @@>) //(fun (Singleton doc) -> doc))
-            ty.AddMember(membbrrr)
-            ty.AddMember container
+
+            let rec treeProp containerTy (item:TokenTree) =
+                let itemsContainer = ProvidedTypeDefinition(item.Token.Title + "Container", Some typeof<MdDomEl>)
+                let itemsMember = ProvidedProperty(propertyName = item.Token.Title, 
+                                                propertyType = itemsContainer, 
+                                                GetterCode = fun args -> 
+                                                    let foo = item.Token.Title
+                                                    <@@ MdDom.create (foo) @@>) //(fun (Singleton doc) -> doc))
+
+                for node in item.Sub do
+                    treeProp itemsContainer node
+
+                containerTy.AddMember itemsMember
+                containerTy.AddMember itemsContainer
 
 
-            let subtype = ProvidedTypeDefinition("subtreeprop", Some typeof<string>)
 
-            ty.AddMember(subtype)
-            let subTableProp = ProvidedProperty("subtreee", subtype, GetterCode = (fun _ -> Expr.Value "fwaaaaa")) // (Singleton doc) -> create doc))
-            container.AddMember(subTableProp)
+            treeProp ty tree
+//
+//
+//
+//            let container = ProvidedTypeDefinition("treeContainer", Some typeof<MarkdownDomElement>)
+//            let membbrrr = ProvidedProperty(propertyName = "treeeee", 
+//                                            propertyType = container, 
+//                                            GetterCode = fun args -> <@@ MarkdownDom.create "onetwothree" @@>) //(fun (Singleton doc) -> doc))
+//            ty.AddMember(membbrrr)
+//            ty.AddMember container
+//
+//
+//            let subtype = ProvidedTypeDefinition("subtreeprop", Some typeof<string>)
+//            ty.AddMember(subtype)
+//            let subTableProp = ProvidedProperty("subtreee", subtype, GetterCode = (fun _ -> Expr.Value "fwaaaaa")) // (Singleton doc) -> create doc))
+//            container.AddMember(subTableProp)
 
             
                             
@@ -183,6 +178,21 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
                             
 [<assembly:TypeProviderAssembly>] 
 do()
+
+
+
+//    let createNodeType name =
+//        let nodeType = ProvidedTypeDefinition(name, Some typeof<nodeInstance>) /// somewhere in here I`m getting errors, need to send in parent type?
+//                                                                                        // might just have to delete the namespace and let it go in as `simple`...
+//        let ctor = ProvidedConstructor(
+//                    [
+//                        ProvidedParameter("Name", typeof<string>)
+//                        ProvidedParameter("UniqueId", typeof<string>)
+//                        ProvidedParameter("Config", typeof<string>)
+//                    ],
+//                    InvokeCode = fun [name;id;config] -> <@@ NodeInstance.create (%%name:string) (%%id:string) (%%config:string) @@>)
+//        nodeType.AddMember(ctor)
+
 
 
 //

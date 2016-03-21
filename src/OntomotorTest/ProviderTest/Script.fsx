@@ -11,19 +11,25 @@ open MarkdownParser
 open MarkdownParser.Tokenize
 
 let f = @"C:\proj\ontomotor\src\data\test\test1\content-autoprops-simple.md"
-let foo = new Proto.TypeProvider.MarkdownFile<"""C:\proj\ontomotor\src\data\test\test1\content-autoprops-simple.md""">()
-//Proto.TypeProvider.StartHere.A.B.C.Word
-//Proto.TypeProvider.MarkdownFile.H.A.B.E.A
-foo.treeeee.subtreee
-//let s = new Proto.TypeProvider.MarkdownFile
+let foo = new Proto.TypeProvider.MarkdownFile<"""C:\proj\ontomotor\src\data\test\test1\content-autoprops-badstructure.md""">()
 
-//foo.FoundItem
-//foo.BlehBleh
+//foo.Document_Root.Foo.Bar.``Prop:_there``
+
+
+
+
+
 foo.Filename
 foo.Location
 
 
+
+//Proto.TypeProvider.StartHere.A.B.C.Word
+//Proto.TypeProvider.MarkdownFile.H.A.B.E.A
 //let bar = Proto.TypeProvider.MarkdownFile<"""C:\proj\ontomotor\src\data\test\test1\content-autoprops-simple.md""">
+//let s = new Proto.TypeProvider.MarkdownFile
+//foo.FoundItem
+//foo.BlehBleh
 
 
 //let g = new Proto.TypeProvider.Type1
