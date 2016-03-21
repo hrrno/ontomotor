@@ -92,22 +92,36 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
     let ns = "Proto.TypeProvider"
     let asm = Assembly.GetExecutingAssembly()
     let mdFileTypeProviderName = "MarkdownFile"
-    let alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-
-    let rec createTypes wordSoFar =
-        alphabet
-        |> Seq.map (fun t -> let newChar = t |> string
-                             let newWord = wordSoFar + newChar
-                             let ty = ProvidedTypeDefinition(newChar, None)
-                             ty.AddMembersDelayed(fun () -> createTypes newWord)
-                             let wordProp = ProvidedProperty("Word", typeof<string>, IsStatic=true, GetterCode = fun args -> <@@ newWord @@>)
-                             ty.AddMember(wordProp)
-                             ty)
-        |> Seq.toList
 
 
-    
+    let createNodeType name =
+        let nodeType = ProvidedTypeDefinition(name, Some typeof<nodeInstance>) /// somewhere in here I`m getting errors, need to send in parent type?
+                                                                                        // might just have to delete the namespace and let it go in as `simple`...
+        let ctor = ProvidedConstructor(
+                    [
+                        ProvidedParameter("Name", typeof<string>)
+                        ProvidedParameter("UniqueId", typeof<string>)
+                        ProvidedParameter("Config", typeof<string>)
+                    ],
+                    InvokeCode = fun [name;id;config] -> <@@ NodeInstance.create (%%name:string) (%%id:string) (%%config:string) @@>)
+        nodeType.AddMember(ctor)
 
+        let outputs = ProvidedTypeDefinition("Outputs", Some typeof<obj>)
+        let outputCtor = ProvidedConstructor([], InvokeCode = fun args -> <@@ obj() @@>)
+        outputs.AddMember(outputCtor)
+        outputs.HideObjectMethods <- true
+
+        //addOutputPort outputs "zzzzom"
+
+//                addPorts inputs outputs node.Ports
+
+        // Add the inputs and outputs types of nested types under the Node type
+        nodeType.AddMembers([outputs])
+
+        // Now add some instance properties to expose them on a node instance.
+        let outputPorts = ProvidedProperty("OutputPorts", outputs, [],GetterCode = fun args -> <@@ obj() @@>)
+        nodeType.AddMembers([outputPorts])
+        nodeType
 
     let createMainTypes =
         // Create the main provided type
@@ -115,7 +129,9 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
 
         // Parameterize the type by the file to use as a template
         let filename = ProvidedStaticParameter("filename", typeof<string>)
-        tyMarkdownFile.AddMembersDelayed(fun () -> createTypes "")
+
+        //tyMarkdownFile.
+
         tyMarkdownFile.DefineStaticParameters(
             [filename], fun tyName [| :? string as filename |] ->
 
@@ -129,6 +145,7 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
                     filename 
 
             let ty = ProvidedTypeDefinition(asm, ns, tyName, Some typeof<MarkdownFile>)
+
             ty.AddMember(ProvidedConstructor([], InvokeCode = fun [] -> <@@ new MarkdownFile(filename') @@>))
             ty.AddMember(ProvidedConstructor(
                             [ProvidedParameter("filename", typeof<string>)],
@@ -138,6 +155,8 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
 
             // add child prop with value or two...
             let tree = Parse.file filename' 
+
+
             let container = ProvidedTypeDefinition("treeContainer", Some typeof<MarkdownDomElement>)
             let membbrrr = ProvidedProperty(propertyName = "treeeee", 
                                             propertyType = container, 
@@ -145,11 +164,27 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
             ty.AddMember(membbrrr)
             ty.AddMember container
 
-            //let subRow = ProvidedTypeDefinition("ZRow", Some typeof<string>)
-
-            //let create, subtype = create table type: tuple of creation function and type
 
             let subtype = ProvidedTypeDefinition("subtreeprop", Some typeof<string>)
+
+            ty.AddMember(subtype)
+            let subTableProp = ProvidedProperty("subtreee", subtype, GetterCode = (fun _ -> Expr.Value "fwaaaaa")) // (Singleton doc) -> create doc))
+            container.AddMember(subTableProp)
+
+            
+                            
+            ty.AddXmlDocDelayed (fun () -> sprintf "<summary>Typed representation of an '%s' file.</summary>" mdFileTypeProviderName)
+            ty
+            )
+        [ tyMarkdownFile ]
+    
+    do this.AddNamespace(Helpers.namespaceName, createMainTypes)
+
+                            
+[<assembly:TypeProviderAssembly>] 
+do()
+
+
 //
 //            let rowConverter =
 //                let rowVar = Var("row", typeof<string[]>)
@@ -171,141 +206,19 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
 //                let rawr = "herrrooooooo"
 //                Expr.Let(rowConverterVar, rowConverter, body)
 
-            ty.AddMember(subtype)
-            let subTableProp = ProvidedProperty("subtreee", subtype, GetterCode = (fun _ -> Expr.Value "fwaaaaa")) // (Singleton doc) -> create doc))
-            container.AddMember(subTableProp)
 
+
+
+
+//    let alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 //
-//            let addInputPort (inputs : ProvidedTypeDefinition) (port : Port) =
-//                let port = ProvidedProperty(
-//                                port.Id.Name,
-//                                typeof<InputPort>,
-//                                GetterCode = fun args ->
-//                                    let id = port.Id.UniqueId.ToString()
-//                                    <@@ GetPort id @@>)
-//                inputs.AddMember(port)
-//
-            let addOutputPort (outputs : ProvidedTypeDefinition) (name: string) =
-                let port = ProvidedProperty(
-                                name,
-                                typeof<string>,
-                                GetterCode = fun args ->
-                                    let id = "ahoy" // port.Id.UniqueId.ToString()
-                                    <@@ id @@>)
-                outputs.AddMember(port)
-//
-//            let addPorts inputs outputs (portList : seq<Port>) =
-//                portList
-//                |> Seq.iter (fun port ->
-//                                match port.Type with
-//                                | "input" -> addInputPort inputs port
-//                                | "output" -> addOutputPort outputs port
-//                                | _ -> failwithf "Unknown port type for port %s/%s" port.Id.Name (port.Id.UniqueId.ToString()))
-
-            let createNodeType name =
-                let nodeType = ProvidedTypeDefinition(asm, ns, name, Some typeof<nodeInstance>)
-                let ctor = ProvidedConstructor(
-                            [
-                                ProvidedParameter("Name", typeof<string>)
-                                ProvidedParameter("UniqueId", typeof<string>)
-                                ProvidedParameter("Config", typeof<string>)
-                            ],
-                            InvokeCode = fun [name;id;config] -> <@@ NodeInstance.create (%%name:string) (%%id:string) (%%config:string) @@>)
-                nodeType.AddMember(ctor)
-
-                let outputs = ProvidedTypeDefinition("Outputs", Some typeof<obj>)
-                let outputCtor = ProvidedConstructor([], InvokeCode = fun args -> <@@ obj() @@>)
-                outputs.AddMember(outputCtor)
-                outputs.HideObjectMethods <- true
-
-                addOutputPort outputs "zzzzom"
-
-//                addPorts inputs outputs node.Ports
-
-                // Add the inputs and outputs types of nested types under the Node type
-                nodeType.AddMembers([outputs])
-
-                // Now add some instance properties to expose them on a node instance.
-                let outputPorts = ProvidedProperty("OutputPorts", outputs, [],GetterCode = fun args -> <@@ obj() @@>)
-
-                nodeType.AddMembers([outputPorts])
-
-                nodeType
-
-
-
-            //ty.AddMember(createNodeType "hey")
-                            
-            ty.AddXmlDocDelayed (fun () -> sprintf "This is a very nice provided type '%s'" mdFileTypeProviderName)
-            ty
-            )
-        [ tyMarkdownFile ]
-
-    do this.AddNamespace(Helpers.namespaceName, createMainTypes)
-
-                            
-[<assembly:TypeProviderAssembly>] 
-do()
-
-
-
-
-
-
-
-//            let rec propGen (parentTy:ProvidedTypeDefinition) (Node(node,sub)) =
-//                let newTy = ProvidedTypeDefinition("NestedType_" + node.Title, Some typeof<obj>, HideObjectMethods = true, IsErased = false)
-//                //newTy.AddMember(ProvidedConstructor([], InvokeCode = fun [] -> <@@ new System.Object() @@>))
-//                
-//                let title = node.Title
-//                let memberProp = 
-//                    ProvidedProperty(propertyName = "Title", 
-//                                     propertyType = typeof<string>, 
-//                                     //IsStatic = true,
-//                                     GetterCode = (fun args -> <@@ title @@>))
-//
-//                newTy.AddMember(memberProp)
-//                for n in sub do propGen newTy n
-//                
-//                parentTy.AddMemberDelayed(fun () -> newTy)
-//
-//            let tree = Parse.file filename' 
-//            tree |> propGen ty
-
-
-
-
-
-
-
-//                let subProp = 
-//                    ProvidedProperty(propertyName = node.Title, 
-//                                     propertyType = typeof<obj>, 
-//                                     IsStatic = true,
-//                                     GetterCode = (fun args -> <@@ newTy @@>))
-
-
-//            // define a provided type for each row, erasing to a Value seq
-//            let tyObservation = ProvidedTypeDefinition("Observation", Some typeof<Value seq>)
-//       
-//            // read SAS schema
-//            use sasFile = new SasFile(filename')
-//
-//            // add one property per SAS variable
-//            sasFile.MetaData.Columns
-//            |> Seq.map (fun col ->
-//                let i = col.Ordinal - 1 
-//                ProvidedProperty(col.Name, typeof<Value>,
-//                    GetterCode = fun [values] ->
-//                                    <@@ (Seq.nth i (%%values: Value seq) ) @@> ) 
-//                )
-//            |> Seq.toList
-//            |> tyObservation.AddMembers
-//
-//            // add a new, more strongly typed Data property (which uses the existing property at runtime)
-//            ty.AddMember(ProvidedProperty(
-//                            "Observations", typedefof<seq<_>>.MakeGenericType(tyObservation),
-//                            GetterCode = fun [sasFile] -> <@@ (%%sasFile: SasFile).Rows @@>))
-//
-//            // add the row type as a nested type
-//            ty.AddMember tyObservation
+//    let rec createTypes wordSoFar =
+//        alphabet
+//        |> Seq.map (fun t -> let newChar = t |> string
+//                             let newWord = wordSoFar + newChar
+//                             let ty = ProvidedTypeDefinition(newChar, None)
+//                             ty.AddMembersDelayed(fun () -> createTypes newWord)
+//                             let wordProp = ProvidedProperty("Word", typeof<string>, IsStatic=true, GetterCode = fun args -> <@@ newWord @@>)
+//                             ty.AddMember(wordProp)
+//                             ty)
+//        |> Seq.toList
