@@ -13,7 +13,7 @@ open MarkdownParser.Tokenize
 let f = @"C:\proj\ontomotor\src\data\test\test1\content-autoprops-simple.md"
 let foo = new Proto.TypeProvider.MarkdownFile<"""C:\proj\ontomotor\src\data\test\test1\content-autoprops-tricky.md""">()
 
-foo.Document_Root.Boom.Wha.``Autoprop3:_123``
+foo.Document_Root.Wakka_Wakka.Long_text_that_is_made_to_cause_confusion_and_problems_with_loading_the_subproperty_names.Incorrect_header_level_with_no_content.Another_incorrect_header_with_no_content2.Title
 
 //.Foo.SubObject.``Autoprop:_This_is_an_autoprop``
 

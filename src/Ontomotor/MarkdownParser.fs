@@ -10,6 +10,8 @@ open System.Text.RegularExpressions
 
 module Tokenize =
 
+    let private title str = (str:string).Trim().Replace(" ", "_")
+
     type Token = 
         | Root     of position : int * content: string 
         | Header   of position : int * content: string 
@@ -21,16 +23,22 @@ module Tokenize =
                 | Yaml (p,c) | Property (p,c) -> p
              member x.Content = 
                 match x with
-                | Root (p,c) | Header   (p,c) 
-                | Yaml (p,c) | Property (p,c) -> c
-             member x.Title = x.Content.Replace("#", "").Trim().Replace(" ", "_")
+                | Root (p,c) | Header (p,c) | Yaml (p,c) -> c
+                | Property (p,c) -> (c.Substring(c.IndexOf(": ") + 2))
+             member x.Title = 
+                 match x with
+                    | Root (p,c) -> c
+                    | Header (p,c) -> c.Replace("#", "")                    
+                    | Yaml _ -> "YamlBlock"
+                    | Property (p,c) -> c.Substring(0, c.IndexOf(": ")) 
+                 |> title
              member x.Level = 
                 match x with
                 | Root _ -> 0
-                | Header (pos,content) -> content.IndexOf("# ") + 1
-                | Property _ | Yaml _ -> -1
+                | Header (p,c) -> c.IndexOf("# ") + 1
+                | Yaml _ | Property _ -> -1
 
-
+                
     type TokenTree = 
         | Node of Token * TokenTree list
         with member x.Token = match x with | Node(n,sub) -> n

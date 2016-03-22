@@ -1,50 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation 2005-2011.
-// This sample code is provided "as is" without warranty of any kind. 
-// We disclaim all warranties, either express or implied, including the 
-// warranties of merchantability and fitness for a particular purpose. 
-
-// This is a sample type provider. It provides 100 types, each containing various properties, 
-// methods and nested types.
-//
-// This code is a sample for use in conjunction with the F# 3.0 Developer Preview release of September 2011.
-//
-// 1. Using the Provider
-// 
-//   To use this provider, open a separate instance of Visual Studio 11 and reference the provider
-//   using #r, e.g.
-//      #r @"bin\Debug\HelloWorldTypeProvider.dll"
-//
-//   Then look for the types under 
-//      Samples.HelloWorldTypeProvider
-//
-// 2. Recompiling the Provider
-//
-//   Make sure you have exited all instances of Visual Studio and F# Interactive using the 
-//   provider DLL before recompiling the provider.
-//
-// 3. Debugging the Provider
-//
-//   To debug this provider using 'print' statements, make a script that exposes a 
-//   problem with the provider, then use
-// 
-//      fsc.exe -r:bin\Debug\HelloWorldTypeProvider.dll script.fsx
-//
-//   To debug this provider using Visual Studio, use
-//
-//      devenv.exe /debugexe fsc.exe -r:bin\Debug\HelloWorldTypeProvider.dll script.fsx
-//
-//   and disable "Just My Code" debugging. Consider setting first-chance exception catching using 
-//
-//      Debug --> Exceptions --> CLR Exceptions --> Thrown
-
+﻿
 namespace Proto.TypeProviderType
 
-open System
 open System.Reflection
 open ProviderImplementation.ProvidedTypes
 open Microsoft.FSharp.Core.CompilerServices
-open Microsoft.FSharp.Quotations
-open Proto.TypeProvider
 open MarkdownParser
 open MarkdownParser.Tokenize
 open System.IO
@@ -117,41 +76,48 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
 
             let filename = Provider.resolveFilename markdownPath config.ResolutionFolder
 
-            let ty = ProvidedTypeDefinition(Provider.assembly, Provider.namespace', tyName, Some typeof<MarkdownFile>)
+            let proxyTy = ProvidedTypeDefinition(Provider.assembly, Provider.namespace', tyName, Some typeof<MarkdownFile>)
 
-            ty.AddMember(ProvidedConstructor([], InvokeCode = fun [] -> <@@ new MarkdownFile(filename) @@>))
-            ty.AddMember(ProvidedConstructor(
-                            [ProvidedParameter("filename", typeof<string>)],
-                            InvokeCode = fun [filename] -> <@@ new MarkdownFile(%%filename) @@>))
+            proxyTy.AddMember(ProvidedConstructor([], InvokeCode = fun [] -> <@@ new MarkdownFile(filename) @@>))
+            proxyTy.AddMember(ProvidedConstructor(
+                                [ProvidedParameter("filename", typeof<string>)],
+                                InvokeCode = fun [filename] -> <@@ new MarkdownFile(%%filename) @@>))
 
 
             let domTree = filename |> Parse.file  
 
 
 
-            let rec addPropertiesTo parentTy (item:TokenTree) =
-                let containerTy = ProvidedTypeDefinition(item.Token.Title + "Container", Some typeof<MdDomEl>)
-                let nodeProp = ProvidedProperty(propertyName = item.Token.Title, 
-                                                propertyType = containerTy, 
-                                                GetterCode = fun args -> 
-                                                    let foo = item.Token.Title
-                                                    <@@ MdDom.create (foo) @@>) //(fun (Singleton doc) -> doc))
+            let rec addPropertiesTo parentTy (Node(token, subtree):TokenTree) =
+                let containerTy = ProvidedTypeDefinition(token.Title + "Container", Some typeof<MdDomEl>)
 
-                // need to differentiate properties and sub objects (right?)
+                let prop =
+                    match token with
+                    | Root(i,c) | Header(i,c) ->
+                        ProvidedProperty(propertyName = token.Title, 
+                                         propertyType = containerTy, 
+                                         GetterCode = fun args -> 
+                                            let title = token.Title
+                                            <@@ MdDom.create (title) @@>)
+                    | Property _ | Yaml _ -> 
+                        ProvidedProperty(propertyName = token.Title, 
+                                         propertyType = typeof<string>, 
+                                         GetterCode = fun args -> 
+                                            let content = token.Content
+                                            <@@ content @@>)
 
-
-                for node in item.Sub do
+                for node in subtree do
                     node |> addPropertiesTo containerTy 
 
-                parentTy.AddMember nodeProp
+                parentTy.AddMember prop
                 parentTy.AddMember containerTy
 
 
 
-            domTree |> addPropertiesTo ty 
+            domTree |> addPropertiesTo proxyTy 
             
-            ty.AddXmlDocDelayed (fun () -> sprintf "<summary>Typed representation of an '%s' file.</summary>" mdFileTypeProviderName)
-            ty
+            proxyTy.AddXmlDocDelayed (fun () -> sprintf "<summary>Typed representation of an '%s' file.</summary>" Provider.proxyName)
+            proxyTy
             )
         [ tyMarkdownFile ]
     
