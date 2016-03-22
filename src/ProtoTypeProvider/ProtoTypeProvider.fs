@@ -146,13 +146,14 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
                 
             | Provider.MultiFile -> 
                 let files = Provider.filesInDir source
-                for i in 0 .. files.Length - 1 do
-                    let docType = ProvidedTypeDefinition("DocumentContainer" + i.ToString(), Some typeof<MdDomEl>)
+                let mutable i = 0
+                for file in files do
+                    i <- i + 1
+                    let docType = ProvidedTypeDefinition("DocumentContainer" + i.ToString(), Some typeof<MarkdownFile>)
                     let docProp = ProvidedProperty(propertyName = "Document" + i.ToString(), 
                                                    propertyType = docType, 
                                                    GetterCode = fun args -> 
-                                                        let path = files.[i]
-                                                        <@@ MdDom.create "Hereisit" @@>)
+                                                        <@@ new MarkdownFile(file) @@>)
 //                    files.[i]
 //                    |> Parse.file  
 //                    |> Provide.properties docType 
