@@ -47,17 +47,27 @@ open Microsoft.FSharp.Quotations
 open Proto.TypeProvider
 open MarkdownParser
 open MarkdownParser.Tokenize
+open System.IO
 
 
 [<AutoOpen>]
 module internal ActivePatterns =
     let (|Singleton|) = function [l] -> l | _ -> failwith "Parameter mismatch"
 
-module Helpers =
+module Provider =
 
-    let namespaceName = "Proto.TypeProvider"
-    let thisAssembly = Assembly.GetExecutingAssembly()
+    let namespace' = "Proto.TypeProvider"
+    let assembly = Assembly.GetExecutingAssembly()
+    let proxyName = "MarkdownFile"
     
+    let resolveFilename path resolutionFolder = 
+        if not <| File.Exists path then
+            let relative = Path.Combine(resolutionFolder, path)
+            if not <| File.Exists relative then
+                failwithf "File '%s' not found" relative
+            relative
+        else
+            path 
 
 type MarkdownFile (filename) =
 
@@ -93,63 +103,67 @@ module MdDom =
         { Title = name } 
 
 
-
 [<TypeProvider>]
 type ProtoTypeProvider(config: TypeProviderConfig) as this = 
     inherit TypeProviderForNamespaces()
         
-    let ns = "Proto.TypeProvider"
-    let asm = Assembly.GetExecutingAssembly()
-    let mdFileTypeProviderName = "MarkdownFile"
 
-
-    let createMainTypes =
-        let tyMarkdownFile = ProvidedTypeDefinition(asm, ns, mdFileTypeProviderName, Some typeof<MarkdownFile>)
-        let filename = ProvidedStaticParameter("filename", typeof<string>)
+    let createProxy =
+        let tyMarkdownFile = ProvidedTypeDefinition(Provider.assembly, Provider.namespace', Provider.proxyName, Some typeof<MarkdownFile>)
+        let pathParam = ProvidedStaticParameter("path", typeof<string>)
 
         tyMarkdownFile.DefineStaticParameters(
-            [filename], fun tyName [| :? string as filename |] ->
+            [ pathParam ], fun tyName [| :? string as markdownPath |] ->
 
-            let filename' =
-                if not <| System.IO.File.Exists filename then
-                    let resolvedFilename = System.IO.Path.Combine(config.ResolutionFolder, filename)
-                    if not <| System.IO.File.Exists resolvedFilename then
-                        failwithf "File '%s' not found" resolvedFilename
-                    resolvedFilename
-                else
-                    filename 
+            let filename = Provider.resolveFilename markdownPath config.ResolutionFolder
 
-            let ty = ProvidedTypeDefinition(asm, ns, tyName, Some typeof<MarkdownFile>)
+            let ty = ProvidedTypeDefinition(Provider.assembly, Provider.namespace', tyName, Some typeof<MarkdownFile>)
 
-            ty.AddMember(ProvidedConstructor([], InvokeCode = fun [] -> <@@ new MarkdownFile(filename') @@>))
+            ty.AddMember(ProvidedConstructor([], InvokeCode = fun [] -> <@@ new MarkdownFile(filename) @@>))
             ty.AddMember(ProvidedConstructor(
                             [ProvidedParameter("filename", typeof<string>)],
                             InvokeCode = fun [filename] -> <@@ new MarkdownFile(%%filename) @@>))
 
 
-
-            // add child prop with value or two...
-            let tree = Parse.file filename' //|> Seq.head
+            let domTree = filename |> Parse.file  
 
 
 
-            let rec treeProp containerTy (item:TokenTree) =
-                let itemsContainer = ProvidedTypeDefinition(item.Token.Title + "Container", Some typeof<MdDomEl>)
-                let itemsMember = ProvidedProperty(propertyName = item.Token.Title, 
-                                                propertyType = itemsContainer, 
+            let rec addPropertiesTo parentTy (item:TokenTree) =
+                let containerTy = ProvidedTypeDefinition(item.Token.Title + "Container", Some typeof<MdDomEl>)
+                let nodeProp = ProvidedProperty(propertyName = item.Token.Title, 
+                                                propertyType = containerTy, 
                                                 GetterCode = fun args -> 
                                                     let foo = item.Token.Title
                                                     <@@ MdDom.create (foo) @@>) //(fun (Singleton doc) -> doc))
 
+                // need to differentiate properties and sub objects (right?)
+
+
                 for node in item.Sub do
-                    treeProp itemsContainer node
+                    node |> addPropertiesTo containerTy 
 
-                containerTy.AddMember itemsMember
-                containerTy.AddMember itemsContainer
+                parentTy.AddMember nodeProp
+                parentTy.AddMember containerTy
 
 
 
-            treeProp ty tree
+            domTree |> addPropertiesTo ty 
+            
+            ty.AddXmlDocDelayed (fun () -> sprintf "<summary>Typed representation of an '%s' file.</summary>" mdFileTypeProviderName)
+            ty
+            )
+        [ tyMarkdownFile ]
+    
+    do this.AddNamespace(Provider.namespace', createProxy)
+
+                            
+[<assembly:TypeProviderAssembly>] 
+do()
+
+
+
+
 //
 //
 //
@@ -166,18 +180,6 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
 //            let subTableProp = ProvidedProperty("subtreee", subtype, GetterCode = (fun _ -> Expr.Value "fwaaaaa")) // (Singleton doc) -> create doc))
 //            container.AddMember(subTableProp)
 
-            
-                            
-            ty.AddXmlDocDelayed (fun () -> sprintf "<summary>Typed representation of an '%s' file.</summary>" mdFileTypeProviderName)
-            ty
-            )
-        [ tyMarkdownFile ]
-    
-    do this.AddNamespace(Helpers.namespaceName, createMainTypes)
-
-                            
-[<assembly:TypeProviderAssembly>] 
-do()
 
 
 
