@@ -14,6 +14,12 @@ let f = @"C:\proj\ontomotor\src\data\test\test1\content-autoprops-simple.md"
 let foo = new Proto.TypeProvider.MarkdownFile<"""C:\proj\ontomotor\src\data\test\test1\content-autoprops-simple.md""">()
 foo.Document_Root.Foo.Bar.DateProp
 foo.Document_Root.Foo.Bar.Prop
+foo.Document_Root.Foo.Bar.BoolProp
+foo.Document_Root.Foo.Bar.BoolProp2
+
+
+
+
 
 //
 //foo.Document_Root.Boom.Wha.Autoprop1

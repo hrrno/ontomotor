@@ -110,48 +110,27 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
                 let containerTy = ProvidedTypeDefinition(token.Title + "Container", Some typeof<MdDomEl>)
 
                 let prop =
-                    match token with
-                    | Root(i,c) | Header(i,c) ->
-                        ProvidedProperty(propertyName = token.Title, 
-                                         propertyType = containerTy, 
-                                         GetterCode = fun args -> 
-                                            let title = token.Title
-                                            <@@ MdDom.create (title) @@>)
-                    | Property _ | Yaml _ -> 
-                        let (type':Type, getter:Quotations.Expr) =
+                    let (type', getter:Quotations.Expr) =
+                        match token with
+                        | Root(i,c) | Header(i,c) ->
+                            let title = token.Title
+                            containerTy :> Type, <@@ MdDom.create (title) @@>
+//                            ProvidedProperty(propertyName = token.Title, 
+//                                             propertyType = containerTy, 
+//                                             GetterCode = fun args -> 
+//                                                let title = token.Title
+//                                                <@@ MdDom.create (title) @@>)
+                        | Property _ | Yaml _ -> 
                             match token.Content with
                             | c when c = "true" || c = "false" -> 
-                                typeof<bool>, <@@ Provide.bool c @@> // (fun c -> bool.Parse(c) :> obj)
-//                                
-//                                ProvidedProperty(propertyName = token.Title, 
-//                                                 propertyType = typeof<bool>, 
-//                                                 GetterCode = fun args -> 
-////                                                    let content = token.Content //valo = content
-////                                                    let res = getContent content
-//                                                    <@@ Provide.bool c @@>)
+                                typeof<bool>, <@@ Provide.bool c @@> 
                             | IsMatch "(\d{1,4})-(\d{1,2})-(\d{1,2})" c ->
-                                typeof<DateTime>, <@@ Provide.date c @@> // (fun c -> Provide.date c :> obj)  // DateTime.ParseExact(c, "yyyy-MM-dd", CultureInfo.InvariantCulture) // :> obj
-//                                let g = <@@ Provide.date c @@>
-//                                
-//                                ProvidedProperty(propertyName = token.Title, 
-//                                                 propertyType = typeof<DateTime>, 
-//                                                 GetterCode = fun args -> 
-////                                                    let content = token.Content //valo = content
-////                                                    let res = getContent content
-//
-//                                                    <@@ Provide.date c @@>)
-                            | c -> typeof<string>, <@@ c @@> // (fun c -> c :> obj)
-//                            
-//                                ProvidedProperty(propertyName = token.Title, 
-//                                                 propertyType = typeof<string>, 
-//                                                 GetterCode = fun args -> 
-////                                                    let content = token.Content //valo = content
-////                                                    let res = getContent content
-//                                                    <@@ c @@>)
+                                typeof<DateTime>, <@@ Provide.date c @@> 
+                            | c -> typeof<string>, <@@ c @@> 
 
-                        ProvidedProperty(propertyName = token.Title, 
-                                         propertyType = type', 
-                                         GetterCode = fun args -> getter)
+                    ProvidedProperty(propertyName = token.Title, 
+                                        propertyType = type', 
+                                        GetterCode = fun args -> getter)
 
                 for node in subtree do
                     node |> addPropertiesTo containerTy 
