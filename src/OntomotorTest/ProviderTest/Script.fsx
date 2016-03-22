@@ -16,7 +16,11 @@ foo.Document_Root.Foo.Bar.DateProp
 foo.Document_Root.Foo.Bar.Prop
 foo.Document_Root.Foo.Bar.BoolProp
 foo.Document_Root.Foo.Bar.BoolProp2
-
+let f = foo.Document_Root.Foo.Bar //.FloatProp
+f.FloatProp
+f.FloatProp2
+f.IntProp
+f.Prop
 
 
 

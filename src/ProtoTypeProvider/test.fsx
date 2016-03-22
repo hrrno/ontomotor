@@ -18,23 +18,25 @@ open System.Text.RegularExpressions
 open System.Globalization
 
 let (|IsMatch|_|) regex str =
-    let m = Regex(regex).Match(str)
+    let m = Regex(regex, RegexOptions.IgnoreCase ).Match(str)
     if m.Success
     then Some str
     else None
 
 
 let doit contento =
-    let (type':Type, content:obj) =
+    let (content:obj) =
         match contento with
-        | c when c = "true" || c = "false" -> 
-            typeof<bool>, bool.Parse(c) :> obj
-        | IsMatch "(\d{1,4})-(\d{1,2})-(\d{1,2})" c ->
-            typeof<DateTime>, DateTime.ParseExact(c, "yyyy-MM-dd", CultureInfo.InvariantCulture) :> obj
-        | c -> typeof<string>, c :> obj
+        | IsMatch "(\d{1,15})(,|\.)(\d{1,8})" c ->
+            bool.Parse(c) :> obj        
+        | IsMatch "\d{1,8}" c ->
+            failwith "int"
+        
+            //typeof<DateTime>, DateTime.ParseExact(c, "yyyy-MM-dd", CultureInfo.InvariantCulture) :> obj
+        | c -> c :> obj
     content
+    
+doit "123.123"
 
-
-
-
-doit "2016-02-04"
+let sep = CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator
+Double.Parse(("123,2").Replace(".", sep).Replace(",", sep))
