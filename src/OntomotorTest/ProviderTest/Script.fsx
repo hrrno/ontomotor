@@ -5,22 +5,51 @@
 
 #r @"../../Ontomotor/bin/Debug/Ontomotor.dll"
 #r @"../../ProtoTypeProvider/bin/Debug/ProtoTypeProvider.dll"
-
-
 open MarkdownParser
 open MarkdownParser.Tokenize
 
-let f = @"C:\proj\ontomotor\src\data\test\test1\content-autoprops-simple.md"
-let foo = new Proto.TypeProvider.MarkdownFile<"""C:\proj\ontomotor\src\data\test\test1\content-autoprops-simple.md""">()
-foo.Document_Root.Foo.Bar.DateProp
-foo.Document_Root.Foo.Bar.Prop
-foo.Document_Root.Foo.Bar.BoolProp
-foo.Document_Root.Foo.Bar.BoolProp2
-let f = foo.Document_Root.Foo.Bar //.FloatProp
-f.FloatProp
-f.FloatProp2
-f.IntProp
-f.Prop
+
+
+
+
+// Multi file test
+// 
+let foo = new Proto.TypeProvider.MarkdownFile<"""C:\proj\ontomotor\src\data\test\test1\""">()
+
+
+
+
+
+// Single file test 
+//
+//let f = @"C:\proj\ontomotor\src\data\test\test1\content-autoprops-simple.md"
+//let foo = new Proto.TypeProvider.MarkdownFile<"""C:\proj\ontomotor\src\data\test\test1\content-autoprops-simple.md""">()
+//foo.Document_Root.Foo.Bar.DateProp
+//foo.Document_Root.Foo.Bar.Prop
+//foo.Document_Root.Foo.Bar.BoolProp
+//foo.Document_Root.Foo.Bar.BoolProp2
+//let f = foo.Document_Root.Foo.Bar //.FloatProp
+//f.FloatProp
+//f.FloatProp2
+//f.IntProp
+//f.Prop
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

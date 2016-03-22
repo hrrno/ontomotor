@@ -22,12 +22,20 @@ module internal ActivePatterns =
     let (|IsInt|_|)    input = input |> checkRegex "(\d{1,9})"
     let (|IsDouble|_|) input = input |> checkRegex "(\d{1,15})(,|\.)(\d{1,8})"
 
+
+type Source =
+    | SingleFile of filepath:string
+    | MultiFile of directorypath:string
+
 module Provider =
 
     let namespace' = "Proto.TypeProvider"
     let assembly = Assembly.GetExecutingAssembly()
     let proxyName = "MarkdownFile"
     
+    let isDir path = Directory.Exists(path)
+    let filesInDir path = Directory.GetFiles(path, "*.md", IO.SearchOption.AllDirectories)
+
     let resolveFilename path resolutionFolder = 
         if not <| File.Exists path then
             let relative = Path.Combine(resolutionFolder, path)
@@ -127,3 +135,12 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
 
 [<assembly:TypeProviderAssembly>] 
 do()
+
+
+
+// want a collection proxy
+    // takes a folder
+    // provides a list of `documents`
+    // Loop current proxy creation on a list of docs...
+
+        // folder -> list of files -> list of trees -> list of proxies with trees filled out
