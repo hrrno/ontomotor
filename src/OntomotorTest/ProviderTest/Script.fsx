@@ -15,7 +15,7 @@ open MarkdownParser.Tokenize
 // Multi file test
 // 
 let foo = new Proto.TypeProvider.MarkdownFile<"""C:\proj\ontomotor\src\data\test\test1\""">()
-
+foo.Document0.Title
 
 
 

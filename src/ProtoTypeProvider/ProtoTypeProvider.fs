@@ -23,9 +23,6 @@ module internal ActivePatterns =
     let (|IsDouble|_|) input = input |> checkRegex "(\d{1,15})(,|\.)(\d{1,8})"
 
 
-type Source =
-    | SingleFile of filepath:string
-    | MultiFile of directorypath:string
 
 module Provider =
 
@@ -33,22 +30,41 @@ module Provider =
     let assembly = Assembly.GetExecutingAssembly()
     let proxyName = "MarkdownFile"
     
-    let isDir path = Directory.Exists(path)
+    let filename path = Path.GetFileName(path)
     let filesInDir path = Directory.GetFiles(path, "*.md", IO.SearchOption.AllDirectories)
+    let isDir path = Directory.Exists(path)
+    let isFile path = File.Exists(path)
 
-    let resolveFilename path resolutionFolder = 
-        if not <| File.Exists path then
+    let (|IsDir|_|) path = if isDir path then Some path else None
+    let (|IsFile|_|) path = if isFile path then Some path else None
+    let (|Exists|_|) = function
+        | IsDir path | IsFile path -> Some path 
+        | _ -> None
+    
+    
+    let resolvePath resolutionFolder path = 
+        match path with
+        | Exists path -> path
+        | _ -> 
             let relative = Path.Combine(resolutionFolder, path)
-            if not <| File.Exists relative then
-                failwithf "File '%s' not found" relative
-            relative
-        else
-            path 
+            match relative with
+            | Exists relative -> relative
+            | _ -> failwithf "File '%s' not found" relative
+
+    type Source =
+        | SingleFile 
+        | MultiFile
+
+    let mode path =
+        match path with
+        | IsDir path -> MultiFile 
+        | _ -> SingleFile 
+        
 
 type MarkdownFile (filename) =
 
     member this.Filename with get () = filename
-    member this.Location with get () = System.IO.Path.GetDirectoryName(filename)
+    member this.Location with get () = Path.GetDirectoryName(filename)
 
 type MdDomEl =
     { Title: string; }
@@ -119,13 +135,32 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
             [ ProvidedStaticParameter("path", typeof<string>) ], 
             fun generatedTypeName [| :? string as markdownPath |] ->
 
-            let filename = Provider.resolveFilename markdownPath config.ResolutionFolder
-            let proxyType = Provide.markdownProxy filename generatedTypeName
+            let source = Provider.resolvePath config.ResolutionFolder markdownPath
+            let proxyType = Provide.markdownProxy source generatedTypeName
 
-            filename 
-            |> Parse.file  
-            |> Provide.properties proxyType 
-            
+            match Provider.mode markdownPath with
+            | Provider.SingleFile ->
+                source 
+                |> Parse.file  
+                |> Provide.properties proxyType 
+                
+            | Provider.MultiFile -> 
+                let files = Provider.filesInDir source
+                for i in 0 .. files.Length - 1 do
+                    let docType = ProvidedTypeDefinition("DocumentContainer" + i.ToString(), Some typeof<MdDomEl>)
+                    let docProp = ProvidedProperty(propertyName = "Document" + i.ToString(), 
+                                                   propertyType = docType, 
+                                                   GetterCode = fun args -> 
+                                                        let path = files.[i]
+                                                        <@@ MdDom.create "Hereisit" @@>)
+//                    files.[i]
+//                    |> Parse.file  
+//                    |> Provide.properties docType 
+
+                    proxyType.AddMember docProp
+                    proxyType.AddMember docType
+                ()
+
             //proxyType.AddXmlDocDelayed (fun () -> sprintf "<summary>Typed representation of an '%s' file.</summary>" Provider.proxyName)
             proxyType
         )
@@ -144,3 +179,7 @@ do()
     // Loop current proxy creation on a list of docs...
 
         // folder -> list of files -> list of trees -> list of proxies with trees filled out
+
+
+
+// Add support for relative directories

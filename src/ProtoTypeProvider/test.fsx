@@ -19,8 +19,15 @@ open System.IO
 // list MD files in a folder
 
 let filename = @"C:\proj\ontomotor\src\data\test\test1"
-let isDir dir = Directory.Exists(dir)
+//let isDir dir = Directory.Exists(dir)
+//
+//isDir filename
+//
+//let files = System.IO.Directory.GetFiles(filename, "*.md", IO.SearchOption.AllDirectories)
+
+
+let isDir path = Directory.Exists(path)
+let isFile path = File.Exists(path)
 
 isDir filename
-
-let files = System.IO.Directory.GetFiles(filename, "*.md", IO.SearchOption.AllDirectories)
+isFile filename
