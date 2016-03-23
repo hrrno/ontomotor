@@ -37,7 +37,7 @@ module Provider =
 
     let namespace' = "Proto.TypeProvider"
     let assembly = Assembly.GetExecutingAssembly()
-    let proxyName = "MarkdownData"
+    let proxyName = "MarkdownProvider"
     
     let resolvePath resolutionFolder path = 
         match path with
@@ -58,24 +58,24 @@ module Provider =
         | _ -> SingleFile 
 
 
-type MarkdownData (path) =
+type MarkdownSource (path) =
 
-    member this.ProxyFor with get () = path
-    member this.Location with get () = Path.GetDirectoryName(path)
+    member this.Source with get () = path
 
 type MarkdownFile (filename) =
 
     static member safeName file = Path.GetFileNameWithoutExtension(file)
                                       .Replace(" ", "_")
                                       .Replace(".md", "")
+                                      .Replace("-", "_")
 
     member this.Filename with get () = filename
     member this.Location with get () = Path.GetDirectoryName(filename)
 
-type MdDomEl =
+type MarkdownElement =
     { Title: string; }
 
-module MdDom =
+module MarkdownDom =
     let create name =
         { Title = name } 
 
@@ -83,14 +83,14 @@ module Provide =
 
     let proxyType typeName =
         ProvidedTypeDefinition(Provider.assembly, Provider.namespace', 
-                               typeName, Some typeof<MarkdownData>)
+                               typeName, Some typeof<MarkdownSource>)
 
     let markdownProxy filename generatedTypeName = 
         let proxyType = proxyType generatedTypeName
-        proxyType.AddMember(ProvidedConstructor([], InvokeCode = fun [] -> <@@ new MarkdownData(filename) @@>))
+        proxyType.AddMember(ProvidedConstructor([], InvokeCode = fun [] -> <@@ new MarkdownSource(filename) @@>))
         proxyType.AddMember(ProvidedConstructor(
                             [ProvidedParameter("filename", typeof<string>)],
-                            InvokeCode = fun [filename] -> <@@ new MarkdownData(%%filename) @@>))
+                            InvokeCode = fun [filename] -> <@@ new MarkdownSource(%%filename) @@>))
         proxyType
 
     let date str = DateTime.Parse(str)
@@ -106,7 +106,7 @@ module Provide =
             match token with
             | Root(i,c) | Header(i,c) ->
                 let title = token.Title
-                (containerType :> Type), <@@ MdDom.create title @@>
+                (containerType :> Type), <@@ MarkdownDom.create title @@>
             | Property _ | Yaml _ -> 
                 match token.Content with
                 | IsBool c   -> typeof<bool>,     <@@ bool c @@> 
@@ -120,7 +120,7 @@ module Provide =
                          GetterCode = fun args -> getter)
 
     let rec properties parentTy (Node(token, subtree):TokenTree) =
-        let containerTy = ProvidedTypeDefinition(token.Title + "Container", Some typeof<MdDomEl>)
+        let containerTy = ProvidedTypeDefinition(token.Title + "Container", Some typeof<MarkdownElement>)
         let prop = token |> propFor containerTy 
 
         for node in subtree do 
@@ -151,21 +151,50 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
                 |> Provide.properties proxyType 
                 
             | Provider.MultiFile -> 
+
+                let docsType = ProvidedTypeDefinition("MarkdownSequence", Some typeof<obj>)
+//                let docType = ProvidedTypeDefinition("DocumentContainer" + (file |> MarkdownFile.safeName), 
+//                                                        Some typeof<MarkdownFile>)
+//                let docProp = ProvidedProperty(propertyName = (file |> MarkdownFile.safeName), 
+//                                                propertyType = docType, 
+//                                                GetterCode = fun args -> <@@ new MarkdownFile(file) @@>)
+
                 let files = filesInDir source
                 let mutable i = 0
                 for file in files do
                     i <- i + 1
                     let docType = ProvidedTypeDefinition("DocumentContainer" + (file |> MarkdownFile.safeName), 
                                                          Some typeof<MarkdownFile>)
-                    let docProp = ProvidedProperty(propertyName = "Document" + i.ToString(), 
+                    let docProp = ProvidedProperty(propertyName = (file |> MarkdownFile.safeName), 
                                                    propertyType = docType, 
                                                    GetterCode = fun args -> <@@ new MarkdownFile(file) @@>)
                     file
                     |> Parse.file  
                     |> Provide.properties docType 
 
-                    proxyType.AddMember docProp
-                    proxyType.AddMember docType
+                    docsType.AddMember docProp
+                    docsType.AddMember docType
+
+                    // .Docs property
+                    // .Documents collection
+
+//                sasFile.MetaData.Columns
+//                |> Seq.map (fun col ->
+//                    let i = col.Ordinal - 1 
+//                    ProvidedProperty(col.Name, typeof<Value>,
+//                        GetterCode = fun [values] ->
+//                                        <@@ (Seq.nth i (%%values: Value seq) ) @@> ) 
+//                    )
+//                |> Seq.toList
+//                |> tyObservation.AddMembers
+
+                proxyType.AddMember(ProvidedProperty(
+                                        "Docs", docsType, // typedefof<seq<_>>.MakeGenericType(docsType),
+                                        GetterCode = fun args -> <@@ new obj() @@>))
+
+                // add the row type as a nested type
+                proxyType.AddMember docsType
+
                 ()
 
 

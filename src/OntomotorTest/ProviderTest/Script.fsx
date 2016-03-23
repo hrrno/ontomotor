@@ -8,20 +8,24 @@
 open MarkdownParser
 open MarkdownParser.Tokenize
 
-
-
-
-
 // Multi file test
 // 
-let foo = new Proto.TypeProvider.MarkdownFile<"""C:\proj\ontomotor\src\data\test\test1\""">()
+let foo = new Proto.TypeProvider.MarkdownData<"""C:\proj\ontomotor\src\data\test\test1\""">()
+
+foo.Docs.``content-autoprops`` // .``content-autoprops-simple``.Root.Foo.Bar.BoolProp
+
+foo.Document6.Document_Root.categories
+
 foo.Document1.Document_Root.H1_1
 
 foo.Document4.Document_Root.Wakka_Wakka.Long_text_that_is_made_to_cause_confusion_and_problems_with_loading_the_subproperty_names.Correct_header_content_afterwards
 foo.Document7.Document_Root.date
 
-for d in [foo.Document1; foo.Document2; foo.Document3 ] do
-    printfn "%s" d.Filename
+
+let docList : Proto.TypeProviderType.MarkdownFile list = [ foo.Document1; foo.Document2; foo.Document3 ]
+
+for d in docList do
+    printfn "%s" d.Location
 
 
 

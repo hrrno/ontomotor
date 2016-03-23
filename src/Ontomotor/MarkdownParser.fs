@@ -121,7 +121,7 @@ module Parse =
     type Markdown = string
 
     let markdown (markdown as md:Markdown) =
-            [ Root(0, "Document Root") ] 
+            [ Root(0, "Root") ] 
               @ tokens Header   (md |> headers)
               @ tokens Property (md |> props)   
               @ tokens Yaml     (md |> yamls) 
