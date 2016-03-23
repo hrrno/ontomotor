@@ -10,9 +10,12 @@ open MarkdownParser.Tokenize
 
 // Multi file test
 // 
-let foo = new Proto.TypeProvider.MarkdownData<"""C:\proj\ontomotor\src\data\test\test1\""">()
+let foo = new Proto.TypeProvider.MarkdownProvider<"""C:\proj\ontomotor\src\data\test\test1\""">()
 
-foo.Docs.``content-autoprops`` // .``content-autoprops-simple``.Root.Foo.Bar.BoolProp
+foo.Docs.frontmatter_withlists // .``content-autoprops`` // .``content-autoprops-simple``.Root.Foo.Bar.BoolProp
+
+foo.Docs.content_autoprops_badstructure
+foo.Location
 
 foo.Document6.Document_Root.categories
 

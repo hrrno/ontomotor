@@ -15,7 +15,7 @@ module internal Utility =
     let (|Singleton|) = function [l] -> l | _ -> failwith "Parameter mismatch"
         
     let filename path = Path.GetFileName(path)
-    let filesInDir path = Directory.GetFiles(path, "*.md", IO.SearchOption.AllDirectories)
+    let markdownFiles path = Directory.GetFiles(path, "*.md", IO.SearchOption.AllDirectories)
     let isDir path = Directory.Exists(path)
     let isFile path = File.Exists(path)
 
@@ -152,17 +152,12 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
                 
             | Provider.MultiFile -> 
 
-                let docsType = ProvidedTypeDefinition("MarkdownSequence", Some typeof<obj>)
-//                let docType = ProvidedTypeDefinition("DocumentContainer" + (file |> MarkdownFile.safeName), 
-//                                                        Some typeof<MarkdownFile>)
-//                let docProp = ProvidedProperty(propertyName = (file |> MarkdownFile.safeName), 
-//                                                propertyType = docType, 
-//                                                GetterCode = fun args -> <@@ new MarkdownFile(file) @@>)
+                let docCollectionType = ProvidedTypeDefinition("MarkdownSequence", Some typeof<obj>)
 
-                let files = filesInDir source
-                let mutable i = 0
-                for file in files do
-                    i <- i + 1
+                // translate this function into something that returns a sequence of docTypes and parse trees
+                // Add them to the docs property, as well as into a collection
+
+                for file in source |> markdownFiles do
                     let docType = ProvidedTypeDefinition("DocumentContainer" + (file |> MarkdownFile.safeName), 
                                                          Some typeof<MarkdownFile>)
                     let docProp = ProvidedProperty(propertyName = (file |> MarkdownFile.safeName), 
@@ -172,35 +167,16 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
                     |> Parse.file  
                     |> Provide.properties docType 
 
-                    docsType.AddMember docProp
-                    docsType.AddMember docType
-
-                    // .Docs property
-                    // .Documents collection
-
-//                sasFile.MetaData.Columns
-//                |> Seq.map (fun col ->
-//                    let i = col.Ordinal - 1 
-//                    ProvidedProperty(col.Name, typeof<Value>,
-//                        GetterCode = fun [values] ->
-//                                        <@@ (Seq.nth i (%%values: Value seq) ) @@> ) 
-//                    )
-//                |> Seq.toList
-//                |> tyObservation.AddMembers
+                    docCollectionType.AddMember docProp
+                    proxyType.AddMember docType
 
                 proxyType.AddMember(ProvidedProperty(
-                                        "Docs", docsType, // typedefof<seq<_>>.MakeGenericType(docsType),
+                                        "Docs", docCollectionType,
                                         GetterCode = fun args -> <@@ new obj() @@>))
 
-                // add the row type as a nested type
-                proxyType.AddMember docsType
+                proxyType.AddMember docCollectionType
 
                 ()
-
-
-                // TODO: Have to remove the DocumentContainer[i] name on the typedef, perhaps provide it in this class for consistent access in collections
-
-            //proxyType.AddXmlDocDelayed (fun () -> sprintf "<summary>Typed representation of an '%s' file.</summary>" Provider.proxyName)
             proxyType
         )
         proxyRoot
@@ -222,3 +198,17 @@ do()
 
 
 // Add support for relative directories
+
+
+
+
+
+//                sasFile.MetaData.Columns
+//                |> Seq.map (fun col ->
+//                    let i = col.Ordinal - 1 
+//                    ProvidedProperty(col.Name, typeof<Value>,
+//                        GetterCode = fun [values] ->
+//                                        <@@ (Seq.nth i (%%values: Value seq) ) @@> ) 
+//                    )
+//                |> Seq.toList
+//                |> tyObservation.AddMembers
