@@ -4,7 +4,7 @@ title: YAML front matter discovered!
 description: The front matter is being read from the document.
 date: 2013-07-04
 published: false
-people:
+people: zzzzzzzzzzzzzz
   name: John Smith
   age: 33
 morePeople: {name: Grace Jones, age: 21}

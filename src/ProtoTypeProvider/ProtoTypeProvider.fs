@@ -11,25 +11,9 @@ open MarkdownParser
 open MarkdownParser.Tokenize
 
 [<AutoOpen>]
-module internal ActivePatterns =
+module internal Utility =
     let (|Singleton|) = function [l] -> l | _ -> failwith "Parameter mismatch"
-
-    let isMatch regex input = Regex(regex, RegexOptions.IgnoreCase).IsMatch(input)
-    let checkRegex regex input = if isMatch regex input then Some input else None
-    let (|IsMatch|_|) regex input = checkRegex regex input
-    let (|IsDate|_|)   input = input |> checkRegex "(\d{1,4})-(\d{1,2})-(\d{1,2})"
-    let (|IsBool|_|)   input = input |> checkRegex "(true|false)"
-    let (|IsInt|_|)    input = input |> checkRegex "(\d{1,9})"
-    let (|IsDouble|_|) input = input |> checkRegex "(\d{1,15})(,|\.)(\d{1,8})"
-
-
-
-module Provider =
-
-    let namespace' = "Proto.TypeProvider"
-    let assembly = Assembly.GetExecutingAssembly()
-    let proxyName = "MarkdownFile"
-    
+        
     let filename path = Path.GetFileName(path)
     let filesInDir path = Directory.GetFiles(path, "*.md", IO.SearchOption.AllDirectories)
     let isDir path = Directory.Exists(path)
@@ -40,7 +24,20 @@ module Provider =
     let (|Exists|_|) = function
         | IsDir path | IsFile path -> Some path 
         | _ -> None
-    
+
+    let isMatch regex input = Regex(regex, RegexOptions.IgnoreCase).IsMatch(input)
+    let checkRegex regex input = if isMatch regex input then Some input else None
+    let (|IsMatch|_|) regex input = checkRegex regex input
+    let (|IsDate|_|)   input = input |> checkRegex "(\d{1,4})-(\d{1,2})-(\d{1,2})"
+    let (|IsBool|_|)   input = input |> checkRegex "(true|false)"
+    let (|IsInt|_|)    input = input |> checkRegex "(\d{1,9})"
+    let (|IsDouble|_|) input = input |> checkRegex "(\d{1,15})(,|\.)(\d{1,8})"
+
+module Provider =
+
+    let namespace' = "Proto.TypeProvider"
+    let assembly = Assembly.GetExecutingAssembly()
+    let proxyName = "MarkdownData"
     
     let resolvePath resolutionFolder path = 
         match path with
@@ -49,7 +46,7 @@ module Provider =
             let relative = Path.Combine(resolutionFolder, path)
             match relative with
             | Exists relative -> relative
-            | _ -> failwithf "File '%s' not found" relative
+            | _ -> failwithf "File or directory '%s' (relative path '%s') not found" path relative
 
     type Source =
         | SingleFile 
@@ -59,9 +56,18 @@ module Provider =
         match path with
         | IsDir path -> MultiFile 
         | _ -> SingleFile 
-        
+
+
+type MarkdownData (path) =
+
+    member this.ProxyFor with get () = path
+    member this.Location with get () = Path.GetDirectoryName(path)
 
 type MarkdownFile (filename) =
+
+    static member safeName file = Path.GetFileNameWithoutExtension(file)
+                                      .Replace(" ", "_")
+                                      .Replace(".md", "")
 
     member this.Filename with get () = filename
     member this.Location with get () = Path.GetDirectoryName(filename)
@@ -77,14 +83,14 @@ module Provide =
 
     let proxyType typeName =
         ProvidedTypeDefinition(Provider.assembly, Provider.namespace', 
-                               typeName, Some typeof<MarkdownFile>)
+                               typeName, Some typeof<MarkdownData>)
 
     let markdownProxy filename generatedTypeName = 
         let proxyType = proxyType generatedTypeName
-        proxyType.AddMember(ProvidedConstructor([], InvokeCode = fun [] -> <@@ new MarkdownFile(filename) @@>))
+        proxyType.AddMember(ProvidedConstructor([], InvokeCode = fun [] -> <@@ new MarkdownData(filename) @@>))
         proxyType.AddMember(ProvidedConstructor(
                             [ProvidedParameter("filename", typeof<string>)],
-                            InvokeCode = fun [filename] -> <@@ new MarkdownFile(%%filename) @@>))
+                            InvokeCode = fun [filename] -> <@@ new MarkdownData(%%filename) @@>))
         proxyType
 
     let date str = DateTime.Parse(str)
@@ -145,22 +151,25 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
                 |> Provide.properties proxyType 
                 
             | Provider.MultiFile -> 
-                let files = Provider.filesInDir source
+                let files = filesInDir source
                 let mutable i = 0
                 for file in files do
                     i <- i + 1
-                    let docType = ProvidedTypeDefinition("DocumentContainer" + i.ToString(), Some typeof<MarkdownFile>)
+                    let docType = ProvidedTypeDefinition("DocumentContainer" + (file |> MarkdownFile.safeName), 
+                                                         Some typeof<MarkdownFile>)
                     let docProp = ProvidedProperty(propertyName = "Document" + i.ToString(), 
                                                    propertyType = docType, 
-                                                   GetterCode = fun args -> 
-                                                        <@@ new MarkdownFile(file) @@>)
-//                    files.[i]
-//                    |> Parse.file  
-//                    |> Provide.properties docType 
+                                                   GetterCode = fun args -> <@@ new MarkdownFile(file) @@>)
+                    file
+                    |> Parse.file  
+                    |> Provide.properties docType 
 
                     proxyType.AddMember docProp
                     proxyType.AddMember docType
                 ()
+
+
+                // TODO: Have to remove the DocumentContainer[i] name on the typedef, perhaps provide it in this class for consistent access in collections
 
             //proxyType.AddXmlDocDelayed (fun () -> sprintf "<summary>Typed representation of an '%s' file.</summary>" Provider.proxyName)
             proxyType
