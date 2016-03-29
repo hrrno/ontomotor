@@ -14,15 +14,8 @@ let foo = new Proto.TypeProvider.MarkdownProvider<"""C:\proj\ontomotor\src\data\
 
 foo.Docs.frontmatter_withlists // .``content-autoprops`` // .``content-autoprops-simple``.Root.Foo.Bar.BoolProp
 
-foo.Docs.content_autoprops_badstructure
-foo.Location
-
-foo.Document6.Document_Root.categories
-
-foo.Document1.Document_Root.H1_1
-
-foo.Document4.Document_Root.Wakka_Wakka.Long_text_that_is_made_to_cause_confusion_and_problems_with_loading_the_subproperty_names.Correct_header_content_afterwards
-foo.Document7.Document_Root.date
+foo.Docs.content_autoprops_badstructure.Root.H1_1.H1_1_H2_1
+foo
 
 
 let docList : Proto.TypeProviderType.MarkdownFile list = [ foo.Document1; foo.Document2; foo.Document3 ]
@@ -31,7 +24,14 @@ for d in docList do
     printfn "%s" d.Location
 
 
-
+//foo.Location
+//
+//foo.Document6.Document_Root.categories
+//
+//foo.Document1.Document_Root.H1_1
+//
+//foo.Document4.Document_Root.Wakka_Wakka.Long_text_that_is_made_to_cause_confusion_and_problems_with_loading_the_subproperty_names.Correct_header_content_afterwards
+//foo.Document7.Document_Root.date
 
 // Single file test 
 //

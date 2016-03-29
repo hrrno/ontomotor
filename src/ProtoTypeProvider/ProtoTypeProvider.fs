@@ -25,13 +25,7 @@ module internal Utility =
         | IsDir path | IsFile path -> Some path 
         | _ -> None
 
-    let isMatch regex input = Regex(regex, RegexOptions.IgnoreCase).IsMatch(input)
-    let checkRegex regex input = if isMatch regex input then Some input else None
-    let (|IsMatch|_|) regex input = checkRegex regex input
-    let (|IsDate|_|)   input = input |> checkRegex "(\d{1,4})-(\d{1,2})-(\d{1,2})"
-    let (|IsBool|_|)   input = input |> checkRegex "(true|false)"
-    let (|IsInt|_|)    input = input |> checkRegex "(\d{1,9})"
-    let (|IsDouble|_|) input = input |> checkRegex "(\d{1,15})(,|\.)(\d{1,8})"
+
 
 module Provider =
 
@@ -79,7 +73,22 @@ module MarkdownDom =
     let create name =
         { Title = name } 
 
+
+module internal ContentMatching =
+
+    let isMatch regex input = Regex(regex, RegexOptions.IgnoreCase).IsMatch(input)
+    let checkRegex regex input = if isMatch regex input then Some input else None
+
+    let (|IsMatch|_|) regex input = checkRegex regex input
+    let (|IsDate|_|)   input = input |> checkRegex "(\d{1,4})-(\d{1,2})-(\d{1,2})"
+    let (|IsBool|_|)   input = input |> checkRegex "(true|false)"
+    let (|IsInt|_|)    input = input |> checkRegex "(\d{1,9})"
+    let (|IsDouble|_|) input = input |> checkRegex "(\d{1,15})(,|\.)(\d{1,8})"
+
+
 module Provide =
+
+    open ContentMatching 
 
     let proxyType typeName =
         ProvidedTypeDefinition(Provider.assembly, Provider.namespace', 
