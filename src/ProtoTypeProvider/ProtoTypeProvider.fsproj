@@ -36,9 +36,6 @@
     <Compile Include="..\..\paket-files\fsprojects\FSharp.TypeProviders.StarterPack\src\ProvidedTypes.fs">
       <Link>ProvidedTypes.fs</Link>
     </Compile>
-    <Compile Include="..\..\paket-files\fsprojects\FSharp.TypeProviders.StarterPack\src\DebugProvidedTypes.fs">
-      <Link>DebugProvidedTypes.fs</Link>
-    </Compile>
     <Compile Include="Example.fs" />
     <Compile Include="..\Ontomotor\MarkdownParser.fs">
       <Link>MarkdownParser.fs</Link>

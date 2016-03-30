@@ -96,10 +96,10 @@ module Provide =
 
     let markdownProxy filename generatedTypeName = 
         let proxyType = proxyType generatedTypeName
-        proxyType.AddMember(ProvidedConstructor([], InvokeCode = fun [] -> <@@ new MarkdownSource(filename) @@>))
+        proxyType.AddMember(ProvidedConstructor([], InvokeCode =  fun (Singleton _) -> <@@ new MarkdownSource(filename) @@>))
         proxyType.AddMember(ProvidedConstructor(
-                            [ProvidedParameter("filename", typeof<string>)],
-                            InvokeCode = fun [filename] -> <@@ new MarkdownSource(%%filename) @@>))
+                                [ProvidedParameter("filename", typeof<string>)],
+                                InvokeCode = fun (Singleton filename) -> <@@ new MarkdownSource(%%filename) @@>))
         proxyType
 
     let date str = DateTime.Parse(str)
@@ -181,7 +181,7 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
 
                 proxyType.AddMember(ProvidedProperty(
                                         "Docs", docCollectionType,
-                                        GetterCode = fun args -> <@@ new obj() @@>))
+                                        GetterCode = fun _ -> <@@ new obj() @@>))
 
                 proxyType.AddMember docCollectionType
 
