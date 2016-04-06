@@ -25,6 +25,20 @@ let inline add x y = x + y
 
 
 
+    
+[<Test>]
+let ``When trees have matching content``() = 
+    add 2 2 |> should equal 4 
+
+[<Test>]
+let ``When trees have no matching content``() = 
+    add 2 2 |> should equal 4 
+
+[<Test>]
+let ``When trees have partially matching content``() = 
+    add 2 2 |> should equal 4 
+
+
 
 // we have:
 
@@ -54,78 +68,78 @@ let t2 = [ Root(0, "Root")
            Property(40, "firstprop: bow") 
          ] |> tokenTree
 
-type A() = 
-  interface IDisposable with 
-    member x.Dispose() = printfn "gone"
-
-// Disposes the first element from an array
-let disposeFirst (a:#IDisposable[]) = a.[0].Dispose()
-
-// Call 'disposeFirst' with 'A[]' as an argument
-let aa = [| new A(); new A() |]
-disposeFirst aa
 
 
-// downcasting
-// generic constraint on the interface to provide casting? (force it to provide a cast function and use it)
-type IAnother = interface end
-[<AbstractClass>]
-type IRaw () = 
-    member x.Raw : obj = unbox x
+type IItem = { Name : string; }
+type IProp = { PName : string; }
 
-type Caster<'a> = 
-    member x.Cast  = x 
+type ITree = 
+    | Props of IItem * ITree list
+    with member x.IFace = match x with | Props(n,sub) -> n
+         member x.Sub   = match x with | Props(n,sub) -> sub
 
-type WithExpression (makethissomethingelse : Caster<_> ) =
-    member x.DoIt = makethissomethingelse.Cast // ()
+//        
+//let rec buildTree trees (list : ITree list) = 
+//    match list with
+//    | [] -> trees, [] 
+//    | (token)::xs ->
+//        let rec collectSubTrees xs trees = 
+//            match buildTree [] xs with
+//            | [], rest -> trees, rest
+//            | newtrees, rest -> collectSubTrees rest (trees @ newtrees)
+//        let sub, rest = collectSubTrees xs []
+//        [Props(token, sub)], rest
+//
+//
+//
+//let foo (t:TokenTree) = buildTree [] t.Sub
 
-type IDownCastable<'t> =
-    abstract member DownCast : 't //= x :> 't
-    //interface end
-
-type Foo () =
-    inherit IRaw()
-    member x.Rawr = "hey"
+let rec findProps (t:TokenTree) : ITree =
+    match t.Token with
+        | Property (i, c) -> Props({ Name = t.Token.Title }, [])
+        | Header (i,c) | Header (i,c) -> 
+            let item = { Name  = "I" + t.Token.Title; }
+            let sub = match t.Sub with
+                            | [] -> []
+                            | x::xs -> [ for i in t.Sub do yield findProps i ]
+            Props(item, sub)
+        
+        | _ -> failwith "Not handling all cases yet"
     
-    interface IDownCastable<Foo> with
-        member x.DownCast = x
-    
-type Bar () = 
-    inherit IRaw()
+//    let foo = [
+//                for s in t.Sub do
+//                    let n = "I" + s.Token.Title
+//                    yield
+//                        match s.Sub with
+//                        | [] -> Props({ Name = n; }, []) 
+////                        | [x] -> 
+////                            x.Print
+////                            Props({ Name = "oi"; }, findProps x) 
+//                        | x::xs -> 
+//                            x.Print
+//                            Props({ Name = "boo"; }, [ for t in s.Sub do yield! findProps t ]) 
+//                        //| [a,b]
+//                        //| [_] -> Props({ Name = n; }, [ for t in s.Sub do yield! findProps t ])
+//
+////                    let s = 
+////                        match s.Token with
+////                        | Header (i,c) -> { Name  = n; }
+////                        | Property (i, c) -> { PName = s.Token.Title }
+////                    let ps = s.Sub |> List.map findProps
+////                    yield  Props({ Name = n; }, [ sub ]) 
+//              ]
+//    foo        
 
-    member x.Baz = "yo"
-    
-    interface IDownCastable<Bar> with
-        member x.DownCast = x
+findProps t1
 
-// pass the type in a constructor and use that for the conversion??
-let b = new Bar()
-//let f : obj = b.Raw
-let zsz : IDownCastable<Bar> = b.Raw :?> IDownCastable<Bar>
+module Interface =
+
+    let extract (t1 : TokenTree) (t2: TokenTree) =
+        
+        t1.Print
+        t2.Print
+
+Interface.extract t1 t2
 
 
-
-let rawr :_ list = [ box <| new Foo(); box <| new Bar(); ]
-let foo = rawr.[1]
-let zz : IDownCastable<Bar> = unbox rawr.[1]
-zz.DownCast    
-
-// Collection that can put out specific types through child methods
-// let arr = d.docs.[1].DOTHECAST
-// arr.CustomMethod
-//  for v in vals do
-    // v.CastTo.GetType()
-
-    
-[<Test>]
-let ``When trees have matching content``() = 
-    add 2 2 |> should equal 4 
-
-[<Test>]
-let ``When trees have no matching content``() = 
-    add 2 2 |> should equal 4 
-
-[<Test>]
-let ``When trees have partially matching content``() = 
-    add 2 2 |> should equal 4 
 

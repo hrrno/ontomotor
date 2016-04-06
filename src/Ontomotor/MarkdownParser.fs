@@ -89,16 +89,16 @@ module Lex =
             | [_] | []   -> comparisons
 
         let rec buildTree offset trees list = 
-          match list with
-          | [] -> trees, [] 
-          | (level, _)::xs when level <= offset -> trees, list
-          | (level, token)::xs ->
-              let rec collectSubTrees xs trees = 
-                match buildTree level [] xs with
-                | [], rest -> trees, rest
-                | newtrees, rest -> collectSubTrees rest (trees @ newtrees)
-              let sub, rest = collectSubTrees xs []
-              [Node(token, sub)], rest
+            match list with
+            | [] -> trees, [] 
+            | (level, _)::xs when level <= offset -> trees, list
+            | (level, token)::xs ->
+                let rec collectSubTrees xs trees = 
+                    match buildTree level [] xs with
+                    | [], rest -> trees, rest
+                    | newtrees, rest -> collectSubTrees rest (trees @ newtrees)
+                let sub, rest = collectSubTrees xs []
+                [Node(token, sub)], rest
 
     let hierarchy tokens = token.levels [] tokens 0
 
