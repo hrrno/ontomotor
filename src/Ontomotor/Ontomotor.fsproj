@@ -50,6 +50,7 @@
   <Import Project="$(FSharpTargetsPath)" />
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
+    <Compile Include="MarkdownParser.fs" />
     <Compile Include="OntologyStructure.fsx" />
     <None Include="markdown-manip.fsx" />
     <None Include="markdown-dom-creation.fsx" />

@@ -8,6 +8,7 @@ nuget Nuget.CommandLine
 nuget FAKE
 nuget SourceLink.Fake
 nuget FSharp.Data
+nuget NUnit.ReSharperRunner3
 
 github fsharp/FAKE modules/Octokit/Octokit.fsx
 
