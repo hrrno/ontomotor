@@ -52,26 +52,26 @@ module Provider =
         | _ -> SingleFile 
 
 
-type MarkdownSource (path) =
+    type MarkdownSource (path) =
 
-    member this.Source with get () = path
+        member this.Source with get () = path
 
-type MarkdownFile (filename) =
+    type MarkdownFile (filename) =
 
-    static member safeName file = Path.GetFileNameWithoutExtension(file)
-                                      .Replace(" ", "_")
-                                      .Replace(".md", "")
-                                      .Replace("-", "_")
+        static member safeName file = Path.GetFileNameWithoutExtension(file)
+                                          .Replace(" ", "_")
+                                          .Replace(".md", "")
+                                          .Replace("-", "_")
 
-    member this.Filename with get () = filename
-    member this.Location with get () = Path.GetDirectoryName(filename)
+        member this.Filename with get () = filename
+        member this.Location with get () = Path.GetDirectoryName(filename)
 
-type MarkdownElement =
-    { Title: string; }
+    type MarkdownElement =
+        { Title: string; }
 
-module MarkdownDom =
-    let create name =
-        { Title = name } 
+    module MarkdownDom =
+        let create name =
+            { Title = name } 
 
 
 module internal ContentMatching =
@@ -89,6 +89,7 @@ module internal ContentMatching =
 module Provide =
 
     open ContentMatching 
+    open Provider
 
     let proxyType typeName =
         ProvidedTypeDefinition(Provider.assembly, Provider.namespace', 
@@ -136,11 +137,14 @@ module Provide =
         parentTy.AddMember prop
         parentTy.AddMember containerTy
         
+open Provider 
 
 [<TypeProvider>]
 type ProtoTypeProvider(config: TypeProviderConfig) as this = 
     inherit TypeProviderForNamespaces()
-        
+    
+    
+
     let createProxy =
         let proxyRoot = Provide.proxyType Provider.proxyName
 
