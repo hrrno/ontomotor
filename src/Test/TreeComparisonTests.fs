@@ -77,65 +77,39 @@ let t2 = [ Root(0, "Root")
 
 
 type IItem = { Name : string; }
-type IProp = { PName : string; }
+//type IItem = { Name : string; }
 
 type ITree = 
-    | Props of IItem * ITree list
-    with member x.IFace = match x with | Props(n,sub) -> n
-         member x.Sub   = match x with | Props(n,sub) -> sub
+    | IFace of IItem * ITree list
+    | IProp of IItem //* ITree list
+    with member x.Item = match x with | IFace(n,sub) -> n | IProp (n) -> n
+         member x.Sub  = match x with | IFace(n,sub) -> sub | IProp _ -> []
 
-//        
-//let rec buildTree trees (list : ITree list) = 
-//    match list with
-//    | [] -> trees, [] 
-//    | (token)::xs ->
-//        let rec collectSubTrees xs trees = 
-//            match buildTree [] xs with
-//            | [], rest -> trees, rest
-//            | newtrees, rest -> collectSubTrees rest (trees @ newtrees)
-//        let sub, rest = collectSubTrees xs []
-//        [Props(token, sub)], rest
-//
-//
-//
-//let foo (t:TokenTree) = buildTree [] t.Sub
+        //member x.Tag = match
+
+        
+        // tag property names and create a hash or a key(?) ignoring interface titles, but showing child interfaces
+
 
 let rec findProps (Node(token, subTokens):TokenTree) : ITree =
-    match token with
-        | Property (i,c) 
-        | Yaml     (i,c) -> 
-            Props({ Name = token.Title }, [])        
-        | Root     (i,c) 
-        | Header   (i,c) -> 
+    match token with 
+        | Header (i,c) | Root (i,c) -> 
             let item = { Name  = "I" + token.Title; }
             let sub  = [ for i in subTokens do yield findProps i ]
-            Props(item, sub)     
+            IFace(item, sub)     
+        | Property (i,c) | Yaml (i,c) -> 
+            IProp({ Name = token.Title } ) //, [])       
 
-findProps t2
+let iTree = findProps t2
 
-//  let foo = [
-//                for s in t.Sub do
-//                    let n = "I" + s.Token.Title
-//                    yield
-//                        match s.Sub with
-//                        | [] -> Props({ Name = n; }, []) 
-////                        | [x] -> 
-////                            x.Print
-////                            Props({ Name = "oi"; }, findProps x) 
-//                        | x::xs -> 
-//                            x.Print
-//                            Props({ Name = "boo"; }, [ for t in s.Sub do yield! findProps t ]) 
-//                        //| [a,b]
-//                        //| [_] -> Props({ Name = n; }, [ for t in s.Sub do yield! findProps t ])
-//
-////                    let s = 
-////                        match s.Token with
-////                        | Header (i,c) -> { Name  = n; }
-////                        | Property (i, c) -> { PName = s.Token.Title }
-////                    let ps = s.Sub |> List.map findProps
-////                    yield  Props({ Name = n; }, [ sub ]) 
-//              ]
-//    foo        
+
+// Identify commonalities - tag?
+    // Create an aggregate
+    // Create a union
+
+
+
+
 
 
 module Interface =
