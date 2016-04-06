@@ -104,8 +104,6 @@ module Provide =
 
     let date str = DateTime.Parse(str)
     let bool str = bool.Parse(str)
-    //let string str = str
-    //let int str = Int32.Parse(str)
     let float str = 
         let sep = CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator
         Double.Parse((str:string).Replace(".", sep).Replace(",", sep))
@@ -161,12 +159,15 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
                 
             | Provider.MultiFile -> 
 
-                let docCollectionType = ProvidedTypeDefinition("MarkdownSequence", Some typeof<obj>)
+                let docCollectionType = ProvidedTypeDefinition("MarkdownSequence", Some typeof<obj>, HideObjectMethods = true)
 
-                // translate this function into something that returns a sequence of docTypes and parse trees
-                // Add them to the docs property, as well as into a collection
+                let docListType = ProvidedTypeDefinition("MarkdownFile", Some typeof<MarkdownFile>, HideObjectMethods = true)
+                
+                let fileList : MarkdownFile list = [] 
 
                 for file in source |> markdownFiles do
+
+
                     let docType = ProvidedTypeDefinition("DocumentContainer" + (file |> MarkdownFile.safeName), 
                                                          Some typeof<MarkdownFile>)
                     let docProp = ProvidedProperty(propertyName = (file |> MarkdownFile.safeName), 
@@ -178,12 +179,19 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
 
                     docCollectionType.AddMember docProp
                     proxyType.AddMember docType
+                    
+                    fileList = fileList @ [new MarkdownFile(file)] |> ignore
 
                 proxyType.AddMember(ProvidedProperty(
-                                        "Docs", docCollectionType,
+                                        "Documents", docCollectionType,
                                         GetterCode = fun _ -> <@@ new obj() @@>))
 
                 proxyType.AddMember docCollectionType
+
+                proxyType.AddMember(ProvidedProperty(
+                                        "Docs", typedefof<list<_>>.MakeGenericType(docListType),
+                                        GetterCode = fun (Singleton proxy) -> <@@ fileList @@>))
+                proxyType.AddMember docListType
 
                 ()
             proxyType

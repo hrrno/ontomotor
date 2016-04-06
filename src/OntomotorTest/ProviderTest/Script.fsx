@@ -12,6 +12,14 @@ open MarkdownParser.Tokenize
 // 
 let foo = new Proto.TypeProvider.MarkdownProvider<"""C:\proj\ontomotor\src\data\test\test1\""">()
 
+foo.Documents.content_autoprops
+foo.Documents.content_autoprops_badstructure.Root.H1_1.H1_1_H2_1.Title
+
+for d in foo.Docs do
+    printfn "%s" d.Location
+foo.Docs |> Seq.length
+
+
 foo.Docs.frontmatter_withlists // .``content-autoprops`` // .``content-autoprops-simple``.Root.Foo.Bar.BoolProp
 
 foo.Docs.content_autoprops_badstructure.Root.H1_1.H1_1_H2_1
