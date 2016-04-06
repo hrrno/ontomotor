@@ -104,6 +104,8 @@ module Lex =
 
     let toTree hierarchy = token.buildTree -1 [] hierarchy |> fst |> Seq.head
 
+    let tokenTree = hierarchy >> toTree
+
 
 module Parse =
 
@@ -126,8 +128,7 @@ module Parse =
               @ tokens Property (md |> props)   
               @ tokens Yaml     (md |> yamls) 
             |> List.sortBy (fun t -> t.Position)
-            |> hierarchy 
-            |> toTree
+            |> tokenTree 
 
     let file path = File.ReadAllText(path) |> markdown
         

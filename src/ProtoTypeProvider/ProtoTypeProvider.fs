@@ -19,8 +19,8 @@ module internal Utility =
     let isDir path = Directory.Exists(path)
     let isFile path = File.Exists(path)
 
-    let (|IsDir|_|) path = if isDir path then Some path else None
-    let (|IsFile|_|) path = if isFile path then Some path else None
+    let (|IsDir|_|)  path = if path |> isDir then Some path else None
+    let (|IsFile|_|) path = if path |> isFile then Some path else None
     let (|Exists|_|) = function
         | IsDir path | IsFile path -> Some path 
         | _ -> None
@@ -96,7 +96,7 @@ module Provide =
 
     let markdownProxy filename generatedTypeName = 
         let proxyType = proxyType generatedTypeName
-        proxyType.AddMember(ProvidedConstructor([], InvokeCode =  fun (Singleton _) -> <@@ new MarkdownSource(filename) @@>))
+        proxyType.AddMember(ProvidedConstructor([], InvokeCode =  fun [] -> <@@ new MarkdownSource(filename) @@>))
         proxyType.AddMember(ProvidedConstructor(
                                 [ProvidedParameter("filename", typeof<string>)],
                                 InvokeCode = fun (Singleton filename) -> <@@ new MarkdownSource(%%filename) @@>))
@@ -104,12 +104,12 @@ module Provide =
 
     let date str = DateTime.Parse(str)
     let bool str = bool.Parse(str)
-    let string str = str
-    let int str = Int32.Parse(str)
+    //let string str = str
+    //let int str = Int32.Parse(str)
     let float str = 
         let sep = CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator
         Double.Parse((str:string).Replace(".", sep).Replace(",", sep))
-
+    
     let propFor containerType token =
         let (type', getter:Quotations.Expr) =
             match token with
