@@ -64,8 +64,14 @@ let t1 = [ Root(0, "Root")
 let t2 = [ Root(0, "Root")
            Header(10, "# FirstHeader")
            Property(20, "firstprop: wow")            
+           Property(25, "secondprop: wdow")            
            Header(30, "# SecondHeader")
            Property(40, "firstprop: bow") 
+           Property(50, "secondprop: bodw") 
+           Property(60, "thirdprop: bowtt") 
+           Header(70, "## Subheader") 
+           Property(80, "subprop: bowtt") 
+           Property(90, "subsubprop: bowtt") 
          ] |> tokenTree
 
 
@@ -94,19 +100,20 @@ type ITree =
 //
 //let foo (t:TokenTree) = buildTree [] t.Sub
 
-let rec findProps (t:TokenTree) : ITree =
-    match t.Token with
-        | Property (i, c) -> Props({ Name = t.Token.Title }, [])
-        | Header (i,c) | Header (i,c) -> 
-            let item = { Name  = "I" + t.Token.Title; }
-            let sub = match t.Sub with
-                            | [] -> []
-                            | x::xs -> [ for i in t.Sub do yield findProps i ]
-            Props(item, sub)
-        
-        | _ -> failwith "Not handling all cases yet"
-    
-//    let foo = [
+let rec findProps (Node(token, subTokens):TokenTree) : ITree =
+    match token with
+        | Property (i,c) 
+        | Yaml     (i,c) -> 
+            Props({ Name = token.Title }, [])        
+        | Root     (i,c) 
+        | Header   (i,c) -> 
+            let item = { Name  = "I" + token.Title; }
+            let sub  = [ for i in subTokens do yield findProps i ]
+            Props(item, sub)     
+
+findProps t2
+
+//  let foo = [
 //                for s in t.Sub do
 //                    let n = "I" + s.Token.Title
 //                    yield
@@ -130,7 +137,6 @@ let rec findProps (t:TokenTree) : ITree =
 //              ]
 //    foo        
 
-findProps t1
 
 module Interface =
 
