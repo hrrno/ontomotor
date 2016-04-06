@@ -15,21 +15,30 @@ let foo = new Proto.TypeProvider.MarkdownProvider<"""C:\proj\ontomotor\src\data\
 foo.Documents.content_autoprops
 foo.Documents.content_autoprops_badstructure.Root.H1_1.H1_1_H2_1.Title
 
+open Proto.TypeProviderType.Provide
+
 for d in foo.Docs do
     printfn "%s" d.Location
 foo.Docs |> Seq.length
 
+//foo.GetType().GetProperties()
+//foo.GetType().GetProperty("Documents").GetValue(foo)
+//foo.Documents.content_autoprops_tricky
+//
+//let (?) (this : 'Source) (prop : string) : 'Result =
+//    let p = this.GetType().GetProperty(prop)
+//    p.GetValue(this, null) :?> 'Result
 
-foo.Docs.frontmatter_withlists // .``content-autoprops`` // .``content-autoprops-simple``.Root.Foo.Bar.BoolProp
+foo.Documents.frontmatter_withlists // .``content-autoprops`` // .``content-autoprops-simple``.Root.Foo.Bar.BoolProp
 
-foo.Docs.content_autoprops_badstructure.Root.H1_1.H1_1_H2_1
+foo.Documents.content_autoprops_badstructure.Root.H1_1.H1_1_H2_1
 foo
 
 
-let docList : Proto.TypeProviderType.MarkdownFile list = [ foo.Document1; foo.Document2; foo.Document3 ]
-
-for d in docList do
-    printfn "%s" d.Location
+//let docList : Proto.TypeProviderType.Provider.MarkdownFile list = [ foo.Document1; foo.Document2; foo.Document3 ]
+//
+//for d in docList do
+//    printfn "%s" d.Location
 
 
 //foo.Location

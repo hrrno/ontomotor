@@ -15,7 +15,7 @@ module internal Utility =
     let (|Singleton|) = function [l] -> l | _ -> failwith "Parameter mismatch"
         
     let filename path = Path.GetFileName(path)
-    let markdownFiles path = Directory.GetFiles(path, "*.md", IO.SearchOption.AllDirectories)
+    let markdownFiles path = Directory.GetFiles(path, "*.md", IO.SearchOption.AllDirectories) |> Array.toList
     let isDir path = Directory.Exists(path)
     let isFile path = File.Exists(path)
 
@@ -25,6 +25,9 @@ module internal Utility =
         | IsDir path | IsFile path -> Some path 
         | _ -> None
 
+    let (?) (this : 'Source) (prop : string) : 'Result =
+        let p = this.GetType().GetProperty(prop)
+        p.GetValue(this, null) :?> 'Result
 
 
 module Provider =
@@ -51,11 +54,6 @@ module Provider =
         | IsDir path -> MultiFile 
         | _ -> SingleFile 
 
-
-    type MarkdownSource (path) =
-
-        member this.Source with get () = path
-
     type MarkdownFile (filename) =
 
         static member safeName file = Path.GetFileNameWithoutExtension(file)
@@ -65,7 +63,22 @@ module Provider =
 
         member this.Filename with get () = filename
         member this.Location with get () = Path.GetDirectoryName(filename)
+        
 
+    type MarkdownSource (path) =
+        member x.Source with get () = path
+        member x.Mode with private get () = path |> mode
+        member x.Documents with get () = []
+        member x.Files with get () = 
+                        match x.Mode with
+                        | MultiFile -> 
+                            (lazy ( 
+                                    path 
+                                    |> markdownFiles 
+                                    |> List.map(fun p -> new MarkdownFile(p)) )
+                            ).Value
+                        | SingleFile -> []
+                        
     type MarkdownElement =
         { Title: string; }
 
@@ -137,14 +150,14 @@ module Provide =
         parentTy.AddMember prop
         parentTy.AddMember containerTy
         
+    // TODO: the markdown source should provide a "toFile" method which uses the provided file names to call its properties
+
 open Provider 
 
 [<TypeProvider>]
 type ProtoTypeProvider(config: TypeProviderConfig) as this = 
     inherit TypeProviderForNamespaces()
     
-    
-
     let createProxy =
         let proxyRoot = Provide.proxyType Provider.proxyName
 
@@ -167,11 +180,8 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
 
                 let docListType = ProvidedTypeDefinition("MarkdownFile", Some typeof<MarkdownFile>, HideObjectMethods = true)
                 
-                let fileList : MarkdownFile list = [] 
 
                 for file in source |> markdownFiles do
-
-
                     let docType = ProvidedTypeDefinition("DocumentContainer" + (file |> MarkdownFile.safeName), 
                                                          Some typeof<MarkdownFile>)
                     let docProp = ProvidedProperty(propertyName = (file |> MarkdownFile.safeName), 
@@ -183,18 +193,15 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
 
                     docCollectionType.AddMember docProp
                     proxyType.AddMember docType
-                    
-                    fileList = fileList @ [new MarkdownFile(file)] |> ignore
 
                 proxyType.AddMember(ProvidedProperty(
                                         "Documents", docCollectionType,
                                         GetterCode = fun _ -> <@@ new obj() @@>))
-
                 proxyType.AddMember docCollectionType
 
                 proxyType.AddMember(ProvidedProperty(
                                         "Docs", typedefof<list<_>>.MakeGenericType(docListType),
-                                        GetterCode = fun (Singleton proxy) -> <@@ fileList @@>))
+                                        GetterCode = fun (Singleton source) -> <@@ (%%source: MarkdownSource).Files @@>))
                 proxyType.AddMember docListType
 
                 ()
