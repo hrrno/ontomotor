@@ -63,8 +63,11 @@ let t1 = [ Root(0, "Root")
 
 let t2 = [ Root(0, "Root")
            Header(10, "# FirstHeader")
-           Property(20, "firstprop: wow")            
-           Property(25, "secondprop: wdow")            
+           Property(15, "firstprop: wow")            
+           Property(20, "secondprop: wdow")                
+           Header(25, "# FirstHeader clone")
+           Property(28, "firstprop: wow")            
+           Property(29, "secondprop: wdow")          
            Header(30, "# SecondHeader")
            Property(40, "firstprop: bow") 
            Property(50, "secondprop: bodw") 
@@ -75,18 +78,24 @@ let t2 = [ Root(0, "Root")
          ] |> tokenTree
 
 
-
 type IItem = { Name : string; }
 //type IItem = { Name : string; }
 
 type ITree = 
     | IFace of IItem * ITree list
-    | IProp of IItem //* ITree list
+    | IProp of IItem
     with member x.Item = match x with | IFace(n,sub) -> n | IProp (n) -> n
          member x.Sub  = match x with | IFace(n,sub) -> sub | IProp _ -> []
+         member x.Id = 
+            match x with 
+            | IFace (item,sub) -> 
+                sub |> List.fold (fun acc subItem -> acc + subItem.Id) 0
+            | IProp (i) -> i.Name.GetHashCode()
 
         //member x.Tag = match
-
+type IDecoratedTree =
+    | IDFace of IItem * interfaces : string list * IDecoratedTree list
+    | IDProp of IItem
         
         // tag property names and create a hash or a key(?) ignoring interface titles, but showing child interfaces
 
@@ -98,16 +107,88 @@ let rec findProps (Node(token, subTokens):TokenTree) : ITree =
             let sub  = [ for i in subTokens do yield findProps i ]
             IFace(item, sub)     
         | Property (i,c) | Yaml (i,c) -> 
-            IProp({ Name = token.Title } ) //, [])       
+            IProp({ Name = token.Title })
+
+let rec printProps (tree:ITree) =
+    printfn "interface: %s = %i" tree.Item.Name tree.Id
+    match tree with
+    | IProp _ -> ()
+    | IFace (item, sub) -> 
+        for s in sub do printProps s
+
 
 let iTree = findProps t2
+//iTree |> printProps
 
+
+// there are two cases to handle: 1 looking for children, 2 comparing trees against one another
+        // Should the comparison be done one the content or the interfaceextraction?
+
+
+// clarify the use case a little, use a clear example showing both situations 
+    // a list with repeating children
+    // two lists with overlap
+
+let rec eatTree (tree : ITree) =
+    match tree.Sub with
+    | [] -> [ IFace( { Name = "IAmEmpty" }, [] )]
+    | x::xs -> 
+        // extract interface from x
+        // grab interfaces from XS
+        // compare and merge
+        tree.Sub  // xs, start the set with X, use add rules to create the combined set
+        |> List.fold 
+            (fun (acc:Set<ITree>) node -> 
+                let newEl = 
+                    match node with
+                    | IFace _ -> 
+                        IFace( { Name = node.Item.Name }, eatTree node)
+                    | IProp _ -> node
+                // send in a flag as a param so that the top level read is intersecting 
+                // while lower level reads are "adding"?
+                printfn "adding:    %A" newEl
+//                match acc.Count with
+//                | 0 -> acc.Add newEl
+//                | _ -> Set.intersect acc (Set.ofList [newEl])
+                acc.Add newEl
+                )
+            (Set.ofList ([]:ITree list))
+        |> Set.toList   
+
+
+printfn "%s" (new System.String('\n', 5))
+let t22 = t2 |> findProps
+let t2t = t2 |> findProps |> eatTree
+let t1t = t1 |> findProps |> eatTree
+
+
+type tree<'a> =
+    | EmptyTree
+    | TreeNode of 'a * 'a tree * 'a tree
+
+let foo = EmptyTree
+
+let data = [("Cats",4);
+            ("Dogs",5);
+            ("Mice",3);
+            ("Elephants",2)]
+let count = List.fold (fun acc (nm,x) -> acc+x) 0 data
+
+
+// Split the trees branches into recursive sets: top and rest, fold top into rest
+//  Depending on merge logic either union or join
+//     Name conflicts and different types *should* result in a downcast (right?)
+//     Not liking the idea of modification... merge rules to change result?  Datatype "take the lowest of these"
 
 // Identify commonalities - tag?
     // Create an aggregate
     // Create a union
 
+    // Split the children into two trees and then return a result (union or join), of their children
+        // headers/"interfaces" are ignored, 
 
+
+// TODO: figure out how to handle conflicting data types ie IOne.Prop : int vs ITwo.Prop : string [(an exception?)]
 
 
 
