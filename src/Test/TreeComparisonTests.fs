@@ -72,14 +72,13 @@ let t2 = [ Root(0, "Root")
            Property(40, "firstprop: bow") 
            Property(50, "secondprop: bodw") 
            Property(60, "thirdprop: bowtt") 
-           Header(70, "## Subheader") 
-           Property(80, "subprop: bowtt") 
-           Property(90, "subsubprop: bowtt") 
+//           Header(70, "## Subheader") 
+//           Property(80, "subprop: bowtt") 
+//           Property(90, "subsubprop: bowtt") 
          ] |> tokenTree
 
 
 type IItem = { Name : string; }
-//type IItem = { Name : string; }
 
 type ITree = 
     | IFace of IItem * ITree list
@@ -92,13 +91,10 @@ type ITree =
                 sub |> List.fold (fun acc subItem -> acc + subItem.Id) 0
             | IProp (i) -> i.Name.GetHashCode()
 
-        //member x.Tag = match
 type IDecoratedTree =
     | IDFace of IItem * interfaces : string list * IDecoratedTree list
     | IDProp of IItem
         
-        // tag property names and create a hash or a key(?) ignoring interface titles, but showing child interfaces
-
 
 let rec findProps (Node(token, subTokens):TokenTree) : ITree =
     match token with 
@@ -129,6 +125,8 @@ let iTree = findProps t2
     // a list with repeating children
     // two lists with overlap
 
+                // send in a flag as a param so that the top level read is intersecting 
+                // while lower level reads are "adding"?
 let rec eatTree (tree : ITree) =
     match tree.Sub with
     | [] -> [ IFace( { Name = "IAmEmpty" }, [] )]
@@ -137,19 +135,19 @@ let rec eatTree (tree : ITree) =
         // grab interfaces from XS
         // compare and merge
         tree.Sub  // xs, start the set with X, use add rules to create the combined set
+        //|> Set.ofList
         |> List.fold 
             (fun (acc:Set<ITree>) node -> 
                 let newEl = 
                     match node with
                     | IFace _ -> 
-                        IFace( { Name = node.Item.Name }, eatTree node)
+                        IFace( { Name = "IShared" }, eatTree node)
                     | IProp _ -> node
-                // send in a flag as a param so that the top level read is intersecting 
-                // while lower level reads are "adding"?
+                printfn "status:    [ %O ]" ( [for e in acc do yield sprintf "%A" e ] |> String.concat ", ")
                 printfn "adding:    %A" newEl
-//                match acc.Count with
-//                | 0 -> acc.Add newEl
-//                | _ -> Set.intersect acc (Set.ofList [newEl])
+
+                // for iitem in acc if 
+
                 acc.Add newEl
                 )
             (Set.ofList ([]:ITree list))
@@ -161,7 +159,10 @@ let t22 = t2 |> findProps
 let t2t = t2 |> findProps |> eatTree
 let t1t = t1 |> findProps |> eatTree
 
-
+//                match acc.Count with
+//                | 0 -> acc.Add newEl
+//                | _ -> Set.intersect acc (Set.ofList [newEl])
+                
 type tree<'a> =
     | EmptyTree
     | TreeNode of 'a * 'a tree * 'a tree
