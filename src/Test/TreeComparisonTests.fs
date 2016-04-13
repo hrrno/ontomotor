@@ -127,37 +127,65 @@ let iTree = findProps t2
 
                 // send in a flag as a param so that the top level read is intersecting 
                 // while lower level reads are "adding"?
+
+let printo li =  [for e in li do yield sprintf "%A" e ] |> String.concat ", "
+let mutable accumulatorSeed : Set<ITree> ref = ref ([] |> Set.ofList)
 let rec eatTree (tree : ITree) =
     match tree.Sub with
-    | [] -> [ IFace( { Name = "IAmEmpty" }, [] )]
+    | [] -> ref (Set.ofList [ IFace( { Name = "IAmEmpty" }, [] )])
     | x::xs -> 
         // extract interface from x
         // grab interfaces from XS
         // compare and merge
         tree.Sub  // xs, start the set with X, use add rules to create the combined set
-        //|> Set.ofList
-        |> List.fold 
-            (fun (acc:Set<ITree>) node -> 
+        |> Set.ofList
+        |> Set.fold 
+            (fun (acc:Set<ITree> ref) node -> 
                 let newEl = 
                     match node with
                     | IFace _ -> 
-                        IFace( { Name = "IShared" }, eatTree node)
+                        let subs = (!(eatTree node) |> Set.toList)
+                        IFace( { Name = "IShared" }, subs )
                     | IProp _ -> node
-                printfn "status:    [ %O ]" ( [for e in acc do yield sprintf "%A" e ] |> String.concat ", ")
+                printfn "status:    [ %O ]" ( printo !acc )
                 printfn "adding:    %A" newEl
 
-                // for iitem in acc if 
+                let mutable copySet = acc
+                printfn "rando1:   [ %O ]" ( printo !copySet )
+                for ii in !copySet do (!copySet).Remove ii
+                printfn "rando2:   [ %O ]\r\n\r\n" ( printo !copySet )
 
-                acc.Add newEl
+                // for iitem in acc if newEl is a subset, add inherited, remove props
+                for iitem in !acc do 
+                    let itemSet = (iitem.Sub |> Set.ofList)
+                    printfn "itemSet:    %O" (printo itemSet)
+                    printfn "NewEl2:   %O" (printo newEl.Sub)
+                    if (not <| itemSet.IsEmpty) && (Set.isSubset itemSet (newEl.Sub |> Set.ofList)) then
+                        printfn "status2:   [ %O ]" ( printo (!acc) )
+                        printfn "removing: %A" iitem
+                        (!copySet).Remove iitem
+                        for ii in (!copySet) do copySet := (!copySet).Remove ii
+                        (!acc).Remove iitem
+                        for ii in (!acc) do
+                            acc := (!acc).Remove ii
+                        printfn "status3:   [ %O ]" ( printo !acc )
+                        printfn "status4:   [ %O ]" ( printo !copySet )
+                        //acc.Add newEl
+                        printfn "_________oi__________\r\n"
+
+                ref ((!acc).Add newEl)
+                //acc.Add newEl
                 )
-            (Set.ofList ([]:ITree list))
-        |> Set.toList   
+            accumulatorSeed //(Set.ofList ([]:ITree list))
+        //|> Set.toList   
 
 
 printfn "%s" (new System.String('\n', 5))
 let t22 = t2 |> findProps
 let t2t = t2 |> findProps |> eatTree
-let t1t = t1 |> findProps |> eatTree
+
+
+//let t1t = t1 |> findProps |> eatTree
 
 //                match acc.Count with
 //                | 0 -> acc.Add newEl
