@@ -72,9 +72,9 @@ let t2 = [ Root(0, "Root")
            Property(40, "firstprop: bow") 
            Property(50, "secondprop: bodw") 
            Property(60, "thirdprop: bowtt") 
-//           Header(70, "## Subheader") 
-//           Property(80, "subprop: bowtt") 
-//           Property(90, "subsubprop: bowtt") 
+           Header(70, "## Subheader") 
+           Property(80, "subprop: bowtt") 
+           Property(90, "subsubprop: bowtt") 
          ] |> tokenTree
 
 
@@ -130,6 +130,8 @@ let iTree = findProps t2
 
 let printo li =  [for e in li do yield sprintf "%A" e ] |> String.concat ", "
 let mutable accumulatorSeed : Set<ITree> ref = ref ([] |> Set.ofList)
+
+
 let rec eatTree (tree : ITree) =
     match tree.Sub with
     | [] -> ref (Set.ofList [ IFace( { Name = "IAmEmpty" }, [] )])
@@ -150,28 +152,31 @@ let rec eatTree (tree : ITree) =
                 printfn "status:    [ %O ]" ( printo !acc )
                 printfn "adding:    %A" newEl
 
-                let mutable copySet = acc
-                printfn "rando1:   [ %O ]" ( printo !copySet )
-                for ii in !copySet do (!copySet).Remove ii
-                printfn "rando2:   [ %O ]\r\n\r\n" ( printo !copySet )
+//                let mutable copySet = acc
+//                printfn "rando1:   [ %O ]" ( printo !copySet )
+//                for ii in !copySet do (!copySet).Remove ii
+//                printfn "rando2:   [ %O ]\r\n\r\n" ( printo !copySet )
 
                 // for iitem in acc if newEl is a subset, add inherited, remove props
+
+                // pull out subsets
+                    // remove them
+                // check for supersets
+                    // if not, add the new one
+
                 for iitem in !acc do 
                     let itemSet = (iitem.Sub |> Set.ofList)
-                    printfn "itemSet:    %O" (printo itemSet)
-                    printfn "NewEl2:   %O" (printo newEl.Sub)
+//                    printfn "itemSet:    %O" (printo itemSet)
+//                    printfn "NewEl2:   %O" (printo newEl.Sub)
                     if (not <| itemSet.IsEmpty) && (Set.isSubset itemSet (newEl.Sub |> Set.ofList)) then
+                        
                         printfn "status2:   [ %O ]" ( printo (!acc) )
                         printfn "removing: %A" iitem
-                        (!copySet).Remove iitem
-                        for ii in (!copySet) do copySet := (!copySet).Remove ii
-                        (!acc).Remove iitem
-                        for ii in (!acc) do
-                            acc := (!acc).Remove ii
-                        printfn "status3:   [ %O ]" ( printo !acc )
-                        printfn "status4:   [ %O ]" ( printo !copySet )
+                        acc := (!acc).Remove iitem
+                        //for ii in (!acc) do acc := (!acc).Remove ii
+                        printfn "\r\n!!!!!!status3:   [ %O ]\r\n" ( printo !acc )
+                        //printfn "status4:   [ %O ]" ( printo !copySet )
                         //acc.Add newEl
-                        printfn "_________oi__________\r\n"
 
                 ref ((!acc).Add newEl)
                 //acc.Add newEl
