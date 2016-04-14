@@ -71,7 +71,7 @@ module Lex =
 
         type TokenLevels = int * Token
 
-        let calcOffset (preceding:Token) (current:Token) currOffset =
+        let calcOffset (preceding:Token, current:Token) currOffset =
             match current with
             | Root _ | Header _ -> current.Level
             | Yaml _ | Property _ ->
@@ -81,23 +81,23 @@ module Lex =
 
         let rec levels (comparisons:TokenLevels list) (tokens:Token list) (offset:int) : TokenLevels list =
             match tokens with
-            | x::xs when comparisons.IsEmpty -> 
-                levels [0, x] (x::xs) 0
-            | x::xs::xss -> 
-                let newOffset = calcOffset x xs offset
-                levels (comparisons @ [(newOffset, xs)]) (xs::xss) newOffset
+            | head::tail when comparisons.IsEmpty -> 
+                levels [0, head] (tokens) 0
+            | token0::token1::xs -> 
+                let newOffset = calcOffset (token0, token1) offset
+                levels (comparisons @ [(newOffset, token1)]) (token1::xs) newOffset
             | [_] | []   -> comparisons
 
         let rec buildTree offset trees list = 
             match list with
             | [] -> trees, [] 
-            | (level, _)::xs when level <= offset -> trees, list
-            | (level, token)::xs ->
+            | (level, _)::tail when level <= offset -> trees, list
+            | (level, token)::tail ->
                 let rec collectSubTrees xs trees = 
                     match buildTree level [] xs with
                     | [], rest -> trees, rest
                     | newtrees, rest -> collectSubTrees rest (trees @ newtrees)
-                let sub, rest = collectSubTrees xs []
+                let sub, rest = collectSubTrees tail []
                 [Node(token, sub)], rest
 
     let hierarchy tokens = token.levels [] tokens 0

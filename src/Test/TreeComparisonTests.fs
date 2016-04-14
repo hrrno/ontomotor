@@ -78,6 +78,24 @@ let t2 = [ Root(0, "Root")
          ] |> tokenTree
 
 
+
+let t3 = [ Root(0, "Root")
+           Header(10, "# FirstHeader")
+           Property(15, "firstprop: wow")            
+           Property(20, "secondprop: wdow")    
+           Property(60, "thirdprop: bowtt")                        
+           Header(25, "# FirstHeader clone")
+           Property(28, "firstprop: wow")            
+           Property(29, "secondprop: wdow")          
+           Header(30, "# SecondHeader")
+           Property(40, "firstprop: bow") 
+           Property(50, "secondprop: bodw") 
+           Header(70, "## Subheader") 
+           Property(80, "subprop: bowtt") 
+           Property(90, "subsubprop: bowtt") 
+         ] |> tokenTree
+
+
 type IItem = { Name : string; }
 
 type ITree = 
@@ -131,71 +149,87 @@ let iTree = findProps t2
 let printo li =  [for e in li do yield sprintf "%A" e ] |> String.concat ", "
 let mutable accumulatorSeed : Set<ITree> ref = ref ([] |> Set.ofList)
 
+  // extract interface from x
+        // grab interfaces from XS
+        // compare and merge
+
+// pull out subsets
+    // remove them
+// check for supersets
+    // if not, add the new one
+let useRef f node = !(f node) |> Set.toList
 
 let rec eatTree (tree : ITree) =
     match tree.Sub with
     | [] -> ref (Set.ofList [ IFace( { Name = "IAmEmpty" }, [] )])
     | x::xs -> 
-        // extract interface from x
-        // grab interfaces from XS
-        // compare and merge
-        tree.Sub  // xs, start the set with X, use add rules to create the combined set
+        tree.Sub
         |> Set.ofList
         |> Set.fold 
             (fun (acc:Set<ITree> ref) node -> 
                 let newEl = 
                     match node with
                     | IFace _ -> 
-                        let subs = (!(eatTree node) |> Set.toList)
+                        let subs = useRef eatTree node
                         IFace( { Name = "IShared" }, subs )
                     | IProp _ -> node
-                printfn "status:    [ %O ]" ( printo !acc )
-                printfn "adding:    %A" newEl
-
-//                let mutable copySet = acc
-//                printfn "rando1:   [ %O ]" ( printo !copySet )
-//                for ii in !copySet do (!copySet).Remove ii
-//                printfn "rando2:   [ %O ]\r\n\r\n" ( printo !copySet )
-
-                // for iitem in acc if newEl is a subset, add inherited, remove props
-
-                // pull out subsets
-                    // remove them
-                // check for supersets
-                    // if not, add the new one
-
+                //printfn "status:    [ %O ]" ( printo !acc )
+                //printfn "adding:    %A" newEl
+                
+                //let props = fun i -> 
+                //let (|IsProperty|) item = function | IProp _ -> true | _ -> false
+                let props item = match item with | IProp _ -> true | _ -> false
+                //let inline 
                 for iitem in !acc do 
-                    let itemSet = (iitem.Sub |> Set.ofList)
-//                    printfn "itemSet:    %O" (printo itemSet)
-//                    printfn "NewEl2:   %O" (printo newEl.Sub)
-                    if (not <| itemSet.IsEmpty) && (Set.isSubset itemSet (newEl.Sub |> Set.ofList)) then
-                        
-                        printfn "status2:   [ %O ]" ( printo (!acc) )
-                        printfn "removing: %A" iitem
+                    let itemSet = set iitem.Sub //|> Set.ofList)
+                    let hasItems = (not <| itemSet.IsEmpty)
+                    let newSub = set newEl.Sub |> Set.ofList)
+                    let justItemProps = iitem.Sub |> List.filter props |> Set.ofList
+                    let justNewProps = newEl.Sub |> List.filter props |> Set.ofList
+
+                    if  hasItems && (Set.isSubset itemSet newSub) then
                         acc := (!acc).Remove iitem
-                        //for ii in (!acc) do acc := (!acc).Remove ii
-                        printfn "\r\n!!!!!!status3:   [ %O ]\r\n" ( printo !acc )
-                        //printfn "status4:   [ %O ]" ( printo !copySet )
-                        //acc.Add newEl
+
+                    if hasItems && (Set.isSubset justNewProps justItemProps) then 
+                        // merge interface
+                        ()
+                    
+                    if hasItems && (Set.isSubset justItemProps justNewProps) then
+                        // merge interface
+                        ()
+
+
+                        // have to handle sub interfaces elegently
+                            // recursive compare?
+                            // Add at all levels between comprable interfaces?
+
+                        
+                        // Right now the comparison of subitems is using the sub-interfaces causing a non-match
+                            // should those be excluded and reintroduced?
+                                // let interfaces = subs.Filter(x => x.Is IFace)
+                                // if subset add new interface
+                                    // !! don`t just add --> merge with existing?
+
+
+                        //printfn "status2:   [ %O ]" ( printo (!acc) )
+                        //printfn "removing: %A" iitem
+                        
+
+                        //printfn "\r\n!!!!!!status3:   [ %O ]\r\n" ( printo !acc )
 
                 ref ((!acc).Add newEl)
-                //acc.Add newEl
                 )
-            accumulatorSeed //(Set.ofList ([]:ITree list))
-        //|> Set.toList   
+            accumulatorSeed 
 
 
-printfn "%s" (new System.String('\n', 5))
+printfn "%s" (new System.String('\n', 3))
 let t22 = t2 |> findProps
 let t2t = t2 |> findProps |> eatTree
 
+let t32 = t3 |> findProps
+let t3t = t3 |> findProps |> eatTree
 
-//let t1t = t1 |> findProps |> eatTree
 
-//                match acc.Count with
-//                | 0 -> acc.Add newEl
-//                | _ -> Set.intersect acc (Set.ofList [newEl])
-                
 type tree<'a> =
     | EmptyTree
     | TreeNode of 'a * 'a tree * 'a tree
