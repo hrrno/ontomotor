@@ -146,8 +146,7 @@ let iTree = findProps t2
                 // send in a flag as a param so that the top level read is intersecting 
                 // while lower level reads are "adding"?
 
-let printo li =  [for e in li do yield sprintf "%A" e ] |> String.concat ", "
-let mutable accumulatorSeed : Set<ITree> ref = ref ([] |> Set.ofList)
+
 
   // extract interface from x
         // grab interfaces from XS
@@ -157,54 +156,57 @@ let mutable accumulatorSeed : Set<ITree> ref = ref ([] |> Set.ofList)
     // remove them
 // check for supersets
     // if not, add the new one
-let listRef nodeSet = !(nodeSet) |> Set.toList
+
+let printo li =  [for e in li do yield sprintf "%A" e ] |> String.concat ", "
+let mutable accumulatorSeed : Set<ITree> ref = ref ([] |> Set.ofList)
+let interfaces s = (s:Set<ITree>) |> Set.filter (fun item -> not (item.Sub.IsEmpty))
+let removeFrom (acc:Set<ITree> ref) item = acc := (!acc).Remove item
+let listFromRef s = !s |> Set.toList
 let props item = match item with | IProp _ -> true | _ -> false
-let propSet item = (item:ITree).Sub |> List.filter props |> set
+let justProps item = (item:ITree).Sub |> List.filter props |> set
+let isPropertySubsetOf s2 s1 = Set.isSubset (s1 |> justProps) (s2 |> justProps)
+let isInterfaceSubsetOf l2 l1 = Set.isSubset (set (l1:ITree).Sub) (set (l2:ITree).Sub)
+
+
+
 
 let rec interfaceTree (tree : ITree) =
     match tree.Sub with
-    | [] -> ref (Set.ofList [ IFace( { Name = "IAmEmpty" }, [] )])
+    | [] -> [ IFace( { Name = "IAmEmpty" }, [] )]
     | x::xs -> 
         tree.Sub
-        |> Set.ofList
-        |> Set.fold 
+        |> List.fold 
             (fun (acc:Set<ITree> ref) node -> 
                 let newEl = 
                     match node with
-                    | IFace _ -> 
-                        IFace( { Name = "IShared" }, node |> interfaceTree |> listRef )
+                    | IFace _ -> IFace( { Name = "IShared" }, node |> interfaceTree )
                     | IProp _ -> node
 
+                for iitem in !acc |> interfaces do 
+                    if iitem |> isInterfaceSubsetOf newEl then
+                        iitem |> removeFrom acc
 
-                for iitem in !acc do 
-                    let itemSet = iitem.Sub |> set
-                    let hasItems = not itemSet.IsEmpty
-                    let newSub = newEl.Sub |> set
-                    let justItemProps = propSet iitem
-                    let justNewProps = propSet newEl
-
-                    if  hasItems && (Set.isSubset itemSet newSub) then
-                        acc := (!acc).Remove iitem
-
-                    if hasItems && (Set.isSubset justNewProps justItemProps) then 
+                    if iitem |> isPropertySubsetOf newEl then
                         // merge interface
                         ()
                     
-                    if hasItems && (Set.isSubset justItemProps justNewProps) then
+                    if newEl |> isPropertySubsetOf iitem then 
                         // merge interface
                         ()
-
 
                         // optionally: create a new interface with the aggregate 
                         //             at both levels to create different matches?
                 ref ((!acc).Add newEl)
                 )
             accumulatorSeed 
+        |> listFromRef
 
 
 printfn "%s" (new System.String('\n', 3))
 let t22 = t2 |> findProps
 let t2t = t2 |> findProps |> interfaceTree
+
+
 
 let t32 = t3 |> findProps
 let t3t = t3 |> findProps |> interfaceTree
