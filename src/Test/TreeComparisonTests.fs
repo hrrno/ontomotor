@@ -103,11 +103,11 @@ type ITree =
     | IProp of IItem
     with member x.Item = match x with | IFace(n,sub) -> n | IProp (n) -> n
          member x.Sub  = match x with | IFace(n,sub) -> sub | IProp _ -> []
-         member x.Id = 
-            match x with 
-            | IFace (item,sub) -> 
-                sub |> List.fold (fun acc subItem -> acc + subItem.Id) 0
-            | IProp (i) -> i.Name.GetHashCode()
+//         member x.Id = 
+//            match x with 
+//            | IFace (item,sub) -> 
+//                sub |> List.fold (fun acc subItem -> acc + subItem.Id) 0
+//            | IProp (i) -> i.Name.GetHashCode()
 
 type IDecoratedTree =
     | IDFace of IItem * interfaces : string list * IDecoratedTree list
@@ -124,7 +124,7 @@ let rec findProps (Node(token, subTokens):TokenTree) : ITree =
             IProp({ Name = token.Title })
 
 let rec printProps (tree:ITree) =
-    printfn "interface: %s = %i" tree.Item.Name tree.Id
+    printfn "interface: %s = %s" tree.Item.Name tree.Item.Name
     match tree with
     | IProp _ -> ()
     | IFace (item, sub) -> 
@@ -159,12 +159,16 @@ let iTree = findProps t2
 
 let printo li =  [for e in li do yield sprintf "%A" e ] |> String.concat ", "
 let mutable accumulatorSeed : Set<ITree> ref = ref ([] |> Set.ofList)
-let interfaces s = (s:Set<ITree>) |> Set.filter (fun item -> not (item.Sub.IsEmpty))
-let removeFrom (acc:Set<ITree> ref) item = acc := (!acc).Remove item
+let withChildren s = (s:Set<ITree>) |> Set.filter (fun item -> not (item.Sub.IsEmpty))
+let removeFrom (s:Set<ITree> ref) item = s := (!s).Remove item
 let listFromRef s = !s |> Set.toList
 let props item = match item with | IProp _ -> true | _ -> false
-let justProps item = (item:ITree).Sub |> List.filter props |> set
-let isPropertySubsetOf s2 s1 = Set.isSubset (s1 |> justProps) (s2 |> justProps)
+let ifaces item = match item with | IFace _ -> true | _ -> false
+let justProps item = (item:ITree).Sub |> List.filter props 
+let justIFaces item = (item:ITree).Sub |> List.filter ifaces 
+let propSet l = l |> justProps |> set
+let faceSet l = l |> justIFaces |> set
+let isPropertySubsetOf s2 s1 = Set.isSubset (s1 |> justProps |> set) (s2 |> justProps |> set)
 let isInterfaceSubsetOf l2 l1 = Set.isSubset (set (l1:ITree).Sub) (set (l2:ITree).Sub)
 
 
@@ -176,39 +180,35 @@ let rec interfaceTree (tree : ITree) =
     | x::xs -> 
         tree.Sub
         |> List.fold 
-            (fun (acc:Set<ITree> ref) node -> 
-                let newEl = 
+            (fun (interfaces:Set<ITree> ref) node -> 
+                let mutable newInterface = 
                     match node with
                     | IFace _ -> IFace( { Name = "IShared" }, node |> interfaceTree )
                     | IProp _ -> node
 
-                for iitem in !acc |> interfaces do 
-                    if iitem |> isInterfaceSubsetOf newEl then
-                        iitem |> removeFrom acc
+                for iface in !interfaces |> withChildren do 
+                    if iface |> isInterfaceSubsetOf newInterface then
+                        iface |> removeFrom interfaces
 
-                    if iitem |> isPropertySubsetOf newEl then
-                        // merge interface
-                        ()
-                    
-                    if newEl |> isPropertySubsetOf iitem then 
-                        // merge interface
-                        ()
+                    if iface |> isPropertySubsetOf newInterface 
+                       || newInterface |> isPropertySubsetOf iface then 
+                        let faces = Set.union (newInterface |> faceSet) (iface |> faceSet)
+                        let props = Set.union (newInterface |> propSet) (iface |> propSet)
+                        iface |> removeFrom interfaces
+                        let finalSub =  Set.union faces props |> Set.toList
+                        newInterface <- IFace( { Name = "IShared" }, finalSub )
 
-                        // optionally: create a new interface with the aggregate 
-                        //             at both levels to create different matches?
-                ref ((!acc).Add newEl)
+                ref ((!interfaces).Add newInterface)
                 )
             accumulatorSeed 
         |> listFromRef
 
 
 printfn "%s" (new System.String('\n', 3))
-let t22 = t2 |> findProps
+//let t22 = t2 |> findProps
 let t2t = t2 |> findProps |> interfaceTree
 
-
-
-let t32 = t3 |> findProps
+//let t32 = t3 |> findProps
 let t3t = t3 |> findProps |> interfaceTree
 
 
