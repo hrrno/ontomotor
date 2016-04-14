@@ -157,6 +157,9 @@ let iTree = findProps t2
 // check for supersets
     // if not, add the new one
 
+
+
+
 let printo li =  [for e in li do yield sprintf "%A" e ] |> String.concat ", "
 let mutable accumulatorSeed : Set<ITree> ref = ref ([] |> Set.ofList)
 let withChildren s = (s:Set<ITree>) |> Set.filter (fun item -> not (item.Sub.IsEmpty))
