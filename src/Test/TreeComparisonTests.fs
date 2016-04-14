@@ -157,9 +157,11 @@ let mutable accumulatorSeed : Set<ITree> ref = ref ([] |> Set.ofList)
     // remove them
 // check for supersets
     // if not, add the new one
-let useRef f node = !(f node) |> Set.toList
+let listRef nodeSet = !(nodeSet) |> Set.toList
+let props item = match item with | IProp _ -> true | _ -> false
+let propSet item = (item:ITree).Sub |> List.filter props |> set
 
-let rec eatTree (tree : ITree) =
+let rec interfaceTree (tree : ITree) =
     match tree.Sub with
     | [] -> ref (Set.ofList [ IFace( { Name = "IAmEmpty" }, [] )])
     | x::xs -> 
@@ -170,22 +172,16 @@ let rec eatTree (tree : ITree) =
                 let newEl = 
                     match node with
                     | IFace _ -> 
-                        let subs = useRef eatTree node
-                        IFace( { Name = "IShared" }, subs )
+                        IFace( { Name = "IShared" }, node |> interfaceTree |> listRef )
                     | IProp _ -> node
-                //printfn "status:    [ %O ]" ( printo !acc )
-                //printfn "adding:    %A" newEl
-                
-                //let props = fun i -> 
-                //let (|IsProperty|) item = function | IProp _ -> true | _ -> false
-                let props item = match item with | IProp _ -> true | _ -> false
-                //let inline 
+
+
                 for iitem in !acc do 
-                    let itemSet = set iitem.Sub //|> Set.ofList)
-                    let hasItems = (not <| itemSet.IsEmpty)
-                    let newSub = set newEl.Sub |> Set.ofList)
-                    let justItemProps = iitem.Sub |> List.filter props |> Set.ofList
-                    let justNewProps = newEl.Sub |> List.filter props |> Set.ofList
+                    let itemSet = iitem.Sub |> set
+                    let hasItems = not itemSet.IsEmpty
+                    let newSub = newEl.Sub |> set
+                    let justItemProps = propSet iitem
+                    let justNewProps = propSet newEl
 
                     if  hasItems && (Set.isSubset itemSet newSub) then
                         acc := (!acc).Remove iitem
@@ -199,24 +195,8 @@ let rec eatTree (tree : ITree) =
                         ()
 
 
-                        // have to handle sub interfaces elegently
-                            // recursive compare?
-                            // Add at all levels between comprable interfaces?
-
-                        
-                        // Right now the comparison of subitems is using the sub-interfaces causing a non-match
-                            // should those be excluded and reintroduced?
-                                // let interfaces = subs.Filter(x => x.Is IFace)
-                                // if subset add new interface
-                                    // !! don`t just add --> merge with existing?
-
-
-                        //printfn "status2:   [ %O ]" ( printo (!acc) )
-                        //printfn "removing: %A" iitem
-                        
-
-                        //printfn "\r\n!!!!!!status3:   [ %O ]\r\n" ( printo !acc )
-
+                        // optionally: create a new interface with the aggregate 
+                        //             at both levels to create different matches?
                 ref ((!acc).Add newEl)
                 )
             accumulatorSeed 
@@ -224,10 +204,10 @@ let rec eatTree (tree : ITree) =
 
 printfn "%s" (new System.String('\n', 3))
 let t22 = t2 |> findProps
-let t2t = t2 |> findProps |> eatTree
+let t2t = t2 |> findProps |> interfaceTree
 
 let t32 = t3 |> findProps
-let t3t = t3 |> findProps |> eatTree
+let t3t = t3 |> findProps |> interfaceTree
 
 
 type tree<'a> =
