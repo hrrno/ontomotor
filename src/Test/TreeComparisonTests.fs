@@ -174,11 +174,19 @@ let ifaces item = match item with | IFace _ -> true | _ -> false
 let justProps item = (item:ITree).Sub |> List.filter props 
 let justIFaces item = (item:ITree).Sub |> List.filter ifaces 
 let propSet item = item |> justProps |> set
-//let faceSet item = item |> justIFaces |> set
+let faceSet item = item |> justIFaces |> set
 let isPropertySubsetOf s2 s1 = Set.isSubset (s1 |> propSet) (s2 |> propSet)
 let isInterfaceSubsetOf l2 l1 = Set.isSubset (set (l1:ITree).Sub) (set (l2:ITree).Sub)
 
 
+//TODO: When merging property subsets sub interfaces are not merged accordingly
+//      I believe a recursive merge function needs to be developed and applied to all sub properties
+//      to get true sticky 'mergin' of the interfaces
+let previousMergeStrategy newInterface iface = 
+    let faces = Set.union (newInterface |> faceSet) (iface |> faceSet)
+    let props = Set.union (newInterface |> propSet) (iface |> propSet)
+    let finalSub = Set.union (newInterface.Sub |> set) (iface.Sub |> set) |> Set.toList
+    ()
 
 let rec interfaceTree (tree : ITree) =
     match tree.Sub with
@@ -196,13 +204,11 @@ let rec interfaceTree (tree : ITree) =
                     if iface |> isInterfaceSubsetOf newInterface then
                         iface |> removeFrom interfaces
 
-                    if iface |> isPropertySubsetOf newInterface 
-                       || newInterface |> isPropertySubsetOf iface then 
-
+                    else if iface |> isPropertySubsetOf newInterface || newInterface |> isPropertySubsetOf iface then 
                         iface |> removeFrom interfaces
                         let finalSub = Set.union (newInterface.Sub |> set) (iface.Sub |> set) |> Set.toList
                         newInterface <- IFace( { Name = "IShared" }, finalSub )
-
+                        
                 ref ((!interfaces).Add newInterface)
                 )
             accumulatorSeed 
@@ -214,6 +220,12 @@ let t1t = t1 |> findProps |> interfaceTree
 let t2t = t2 |> findProps |> interfaceTree
 let t3t = t3 |> findProps |> interfaceTree
 let t4t = t4 |> findProps |> interfaceTree
+
+
+
+
+
+
 
 
 type tree<'a> =
