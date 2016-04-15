@@ -87,6 +87,24 @@ let t3 = [ Root(0, "Root")
            Header(25, "# FirstHeader clone")
            Property(28, "firstprop: wow")            
            Property(29, "secondprop: wdow")          
+           Property(29, "thirdprop: wdow")          
+           Header(30, "# SecondHeader")
+           Property(40, "firstprop: bow") 
+           Property(50, "secondprop: bodw") 
+           Header(70, "## Subheader") 
+           Property(80, "subprop: bowtt") 
+           Property(90, "subsubprop: bowtt") 
+         ] |> tokenTree
+
+
+
+let t4 = [ Root(0, "Root")
+           Header(10, "# FirstHeader")
+           Property(15, "firstprop: wow")            
+           Property(20, "secondprop: wdow")                         
+           Header(25, "# FirstHeader clone")
+           Property(28, "firstprop: wow")            
+           Property(29, "secondprop: wdow")          
            Header(30, "# SecondHeader")
            Property(40, "firstprop: bow") 
            Property(50, "secondprop: bodw") 
@@ -132,48 +150,23 @@ let rec printProps (tree:ITree) =
 
 
 let iTree = findProps t2
-//iTree |> printProps
-
-
-// there are two cases to handle: 1 looking for children, 2 comparing trees against one another
-        // Should the comparison be done one the content or the interfaceextraction?
-
-
-// clarify the use case a little, use a clear example showing both situations 
-    // a list with repeating children
-    // two lists with overlap
-
-                // send in a flag as a param so that the top level read is intersecting 
-                // while lower level reads are "adding"?
-
-
-
-  // extract interface from x
-        // grab interfaces from XS
-        // compare and merge
-
-// pull out subsets
-    // remove them
-// check for supersets
-    // if not, add the new one
-
-
 
 
 let printo li =  [for e in li do yield sprintf "%A" e ] |> String.concat ", "
+
+
 let mutable accumulatorSeed : Set<ITree> ref = ref ([] |> Set.ofList)
 let withChildren s = (s:Set<ITree>) |> Set.filter (fun item -> not (item.Sub.IsEmpty))
-let removeFrom (s:Set<ITree> ref) item = s := (!s).Remove item
+let removeFrom s item = (s:Set<ITree> ref) := (!s).Remove item
 let listFromRef s = !s |> Set.toList
 let props item = match item with | IProp _ -> true | _ -> false
 let ifaces item = match item with | IFace _ -> true | _ -> false
 let justProps item = (item:ITree).Sub |> List.filter props 
 let justIFaces item = (item:ITree).Sub |> List.filter ifaces 
-let propSet l = l |> justProps |> set
-let faceSet l = l |> justIFaces |> set
-let isPropertySubsetOf s2 s1 = Set.isSubset (s1 |> justProps |> set) (s2 |> justProps |> set)
+let propSet item = item |> justProps |> set
+let faceSet item = item |> justIFaces |> set
+let isPropertySubsetOf s2 s1 = Set.isSubset (s1 |> propSet) (s2 |> faceSet)
 let isInterfaceSubsetOf l2 l1 = Set.isSubset (set (l1:ITree).Sub) (set (l2:ITree).Sub)
-
 
 
 
@@ -193,13 +186,17 @@ let rec interfaceTree (tree : ITree) =
                     if iface |> isInterfaceSubsetOf newInterface then
                         iface |> removeFrom interfaces
 
-                    if iface |> isPropertySubsetOf newInterface 
-                       || newInterface |> isPropertySubsetOf iface then 
-                        let faces = Set.union (newInterface |> faceSet) (iface |> faceSet)
-                        let props = Set.union (newInterface |> propSet) (iface |> propSet)
-                        iface |> removeFrom interfaces
-                        let finalSub =  Set.union faces props |> Set.toList
-                        newInterface <- IFace( { Name = "IShared" }, finalSub )
+//                    if iface |> isPropertySubsetOf newInterface 
+//                       || newInterface |> isPropertySubsetOf iface then 
+//
+//                        //let foor = newInterface |> faceSet >> propSet
+//                        iface |> removeFrom interfaces
+//                        let faces = Set.union (newInterface |> faceSet) (iface |> faceSet)
+//                        let props = Set.union (newInterface |> propSet) (iface |> propSet)
+//                        printf "THIS IS HAPPENING \r\n"
+//                        //let finalSub =  Set.union faces props |> Set.toList
+//                        let finalSub = Set.union (newInterface.Sub |> set) (iface.Sub |> set) //|> Set.toList
+//                        newInterface <- IFace( { Name = "IShared" }, finalSub |> Set.toList )
 
                 ref ((!interfaces).Add newInterface)
                 )
@@ -208,11 +205,10 @@ let rec interfaceTree (tree : ITree) =
 
 
 printfn "%s" (new System.String('\n', 3))
-//let t22 = t2 |> findProps
+let t1t = t1 |> findProps |> interfaceTree
 let t2t = t2 |> findProps |> interfaceTree
-
-//let t32 = t3 |> findProps
 let t3t = t3 |> findProps |> interfaceTree
+let t4t = t4 |> findProps |> interfaceTree
 
 
 type tree<'a> =
