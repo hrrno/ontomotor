@@ -87,7 +87,10 @@ let t3 = [ Root(0, "Root")
            Header(25, "# FirstHeader clone")
            Property(28, "firstprop: wow")            
            Property(29, "secondprop: wdow")          
-           Property(29, "thirdprop: wdow")          
+           Property(29, "thirdprop: wdow")                        
+           Header(25, "# 2 FirstHeader clone 2")
+           Property(28, "firstprop: wow")            
+           Property(29, "secondprop: wdow")          
            Header(30, "# SecondHeader")
            Property(40, "firstprop: bow") 
            Property(50, "secondprop: bodw") 
@@ -165,7 +168,7 @@ let justProps item = (item:ITree).Sub |> List.filter props
 let justIFaces item = (item:ITree).Sub |> List.filter ifaces 
 let propSet item = item |> justProps |> set
 let faceSet item = item |> justIFaces |> set
-let isPropertySubsetOf s2 s1 = Set.isSubset (s1 |> propSet) (s2 |> faceSet)
+let isPropertySubsetOf s2 s1 = Set.isSubset (s1 |> propSet) (s2 |> propSet)
 let isInterfaceSubsetOf l2 l1 = Set.isSubset (set (l1:ITree).Sub) (set (l2:ITree).Sub)
 
 
@@ -186,17 +189,17 @@ let rec interfaceTree (tree : ITree) =
                     if iface |> isInterfaceSubsetOf newInterface then
                         iface |> removeFrom interfaces
 
-//                    if iface |> isPropertySubsetOf newInterface 
-//                       || newInterface |> isPropertySubsetOf iface then 
-//
-//                        //let foor = newInterface |> faceSet >> propSet
-//                        iface |> removeFrom interfaces
-//                        let faces = Set.union (newInterface |> faceSet) (iface |> faceSet)
-//                        let props = Set.union (newInterface |> propSet) (iface |> propSet)
-//                        printf "THIS IS HAPPENING \r\n"
-//                        //let finalSub =  Set.union faces props |> Set.toList
-//                        let finalSub = Set.union (newInterface.Sub |> set) (iface.Sub |> set) //|> Set.toList
-//                        newInterface <- IFace( { Name = "IShared" }, finalSub |> Set.toList )
+                    if iface |> isPropertySubsetOf newInterface 
+                       || newInterface |> isPropertySubsetOf iface then 
+
+                        //let foor = newInterface |> faceSet >> propSet
+                        iface |> removeFrom interfaces
+                        let faces = Set.union (newInterface |> faceSet) (iface |> faceSet)
+                        let props = Set.union (newInterface |> propSet) (iface |> propSet)
+                        printf "THIS IS HAPPENING \r\n"
+                        let finalSub =  Set.union faces props |> Set.toList
+                        //let finalSub = Set.union (newInterface.Sub |> set) (iface.Sub |> set) |> Set.toList
+                        newInterface <- IFace( { Name = "IShared" }, finalSub )
 
                 ref ((!interfaces).Add newInterface)
                 )
