@@ -124,6 +124,22 @@ let t4 = [ Root(0, "Root")
          ] |> tokenTree
 
 
+// loosely representing two trees with non-matched sub interfaces
+let t5 = [ Root(0, "Root")
+           Header(10, "# LHS FirstHeader")
+           Property(20, "firstprop: wow")  
+           Property(20, "secondprop: wow")  
+           Header(30, "## LHS secondheader")
+           Property(40, "lhsfirstprop: wow")      
+           Property(40, "lhssecondprop: bow") 
+           Header(50, "# RHS FirstHeader")
+           Property(60, "firstprop: wow")  
+           Property(60, "secondprop: wow")  
+           Header(70, "## RHS secondheader")
+           Property(80, "firstprop: wow")      
+           Property(80, "secondprop: bow") 
+         ] |> tokenTree
+
 type IItem = { Name : string; }
 
 type ITree = 
@@ -131,16 +147,7 @@ type ITree =
     | IProp of IItem
     with member x.Item = match x with | IFace(n,sub) -> n | IProp (n) -> n
          member x.Sub  = match x with | IFace(n,sub) -> sub | IProp _ -> []
-//         member x.Id = 
-//            match x with 
-//            | IFace (item,sub) -> 
-//                sub |> List.fold (fun acc subItem -> acc + subItem.Id) 0
-//            | IProp (i) -> i.Name.GetHashCode()
-
-type IDecoratedTree =
-    | IDFace of IItem * interfaces : string list * IDecoratedTree list
-    | IDProp of IItem
-        
+                 
 
 let rec findProps (Node(token, subTokens):TokenTree) : ITree =
     match token with 
@@ -179,14 +186,45 @@ let isPropertySubsetOf s2 s1 = Set.isSubset (s1 |> propSet) (s2 |> propSet)
 let isInterfaceSubsetOf l2 l1 = Set.isSubset (set (l1:ITree).Sub) (set (l2:ITree).Sub)
 
 
+
 //TODO: When merging property subsets sub interfaces are not merged accordingly
 //      I believe a recursive merge function needs to be developed and applied to all sub properties
 //      to get true sticky 'mergin' of the interfaces
+
+// have to support recursive merge here to put trees together...
 let previousMergeStrategy newInterface iface = 
     let faces = Set.union (newInterface |> faceSet) (iface |> faceSet)
     let props = Set.union (newInterface |> propSet) (iface |> propSet)
     let finalSub = Set.union (newInterface.Sub |> set) (iface.Sub |> set) |> Set.toList
     ()
+
+
+let wrappedFace subs = IFace( { Name = "IShared" }, subs |> Seq.toList )
+
+let rec deepMerge (lhs : ITree) (rhs : ITree) : ITree =
+    printfn "Meeeerging\r\n"
+    let lhsSubs = lhs |> justIFaces |> wrappedFace
+    let rhsSubs = rhs |> justIFaces |> wrappedFace
+
+    let lhsProps = lhs |> justProps
+    let rhsProps = rhs |> justProps
+    let props = lhsProps @ rhsProps |> set
+
+    let combiFaces = (deepMerge lhsSubs rhsSubs).Sub |> set
+
+    combiFaces 
+    |> Set.union props
+    |> wrappedFace
+
+//
+//    let faces = deepMerge lhsSubs rhsSubs
+//    let faces = Set.union (newInterface |> faceSet) (iface |> faceSet)
+//    let props = Set.union (newInterface |> propSet) (iface |> propSet)
+//    let finalSub = Set.union (newInterface.Sub |> set) (iface.Sub |> set) |> Set.toList
+    
+    // have to figure out which one is deeper?  Or perhaps iterate over extracted collections (for all interfaces between either side do...)
+    
+
 
 let rec interfaceTree (tree : ITree) =
     match tree.Sub with
@@ -206,13 +244,21 @@ let rec interfaceTree (tree : ITree) =
 
                     else if iface |> isPropertySubsetOf newInterface || newInterface |> isPropertySubsetOf iface then 
                         iface |> removeFrom interfaces
-                        let finalSub = Set.union (newInterface.Sub |> set) (iface.Sub |> set) |> Set.toList
-                        newInterface <- IFace( { Name = "IShared" }, finalSub )
+                        
+                        newInterface <- deepMerge newInterface iface
+
+//                        let finalSub = Set.union (newInterface.Sub |> set) (iface.Sub |> set) |> Set.toList
+//                        newInterface <- IFace( { Name = "IShared" }, finalSub )
                         
                 ref ((!interfaces).Add newInterface)
                 )
             accumulatorSeed 
         |> listFromRef
+
+
+
+let t5t = t5 |> findProps |> interfaceTree
+
 
 
 printfn "%s" (new System.String('\n', 3))
@@ -222,23 +268,6 @@ let t3t = t3 |> findProps |> interfaceTree
 let t4t = t4 |> findProps |> interfaceTree
 
 
-
-
-
-
-
-
-type tree<'a> =
-    | EmptyTree
-    | TreeNode of 'a * 'a tree * 'a tree
-
-let foo = EmptyTree
-
-let data = [("Cats",4);
-            ("Dogs",5);
-            ("Mice",3);
-            ("Elephants",2)]
-let count = List.fold (fun acc (nm,x) -> acc+x) 0 data
 
 
 // Split the trees branches into recursive sets: top and rest, fold top into rest

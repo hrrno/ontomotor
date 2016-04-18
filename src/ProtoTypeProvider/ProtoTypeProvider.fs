@@ -130,10 +130,10 @@ module Provide =
                 (containerType :> Type), <@@ MarkdownDom.create title @@>
             | Property _ | Yaml _ -> 
                 match token.Content with
-                | IsBool c   -> typeof<bool>,     <@@ bool c @@> 
-                | IsDate c   -> typeof<DateTime>, <@@ date c @@>
-                | IsDouble c -> typeof<float>,    <@@ float c @@> 
-                | IsInt c    -> typeof<int>,      <@@ int c @@> 
+                | IsBool c   -> typeof<bool>,     <@@ bool c   @@> 
+                | IsDate c   -> typeof<DateTime>, <@@ date c   @@>
+                | IsDouble c -> typeof<float>,    <@@ float c  @@> 
+                | IsInt c    -> typeof<int>,      <@@ int c    @@> 
                 | c          -> typeof<string>,   <@@ string c @@> 
 
         ProvidedProperty(propertyName = token.Title, 
