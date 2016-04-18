@@ -201,16 +201,17 @@ let previousMergeStrategy newInterface iface =
 
 let wrappedFace subs = IFace( { Name = "IShared" }, subs |> Seq.toList )
 
-let rec deepMerge (lhs : ITree) (rhs : ITree) : ITree =
+let rec deepMerge (lhs : ITree list) (rhs : ITree list) : ITree =
     printfn "Meeeerging\r\n"
-    let lhsSubs = lhs |> justIFaces |> wrappedFace
-    let rhsSubs = rhs |> justIFaces |> wrappedFace
+    let lhsSubs = lhs |> justIFaces
+    let rhsSubs = rhs |> justIFaces
+    printfn "%A %A\r\n" lhsSubs rhsSubs
 
     let lhsProps = lhs |> justProps
     let rhsProps = rhs |> justProps
     let props = lhsProps @ rhsProps |> set
-
-    let combiFaces = (deepMerge lhsSubs rhsSubs).Sub |> set
+    
+    let combiFaces = deepMerge lhsSubs rhsSubs |> set
 
     combiFaces 
     |> Set.union props
@@ -243,8 +244,8 @@ let rec interfaceTree (tree : ITree) =
                         iface |> removeFrom interfaces
 
                     else if iface |> isPropertySubsetOf newInterface || newInterface |> isPropertySubsetOf iface then 
+
                         iface |> removeFrom interfaces
-                        
                         newInterface <- deepMerge newInterface iface
 
 //                        let finalSub = Set.union (newInterface.Sub |> set) (iface.Sub |> set) |> Set.toList
