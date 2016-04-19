@@ -142,6 +142,12 @@ let t5 = [ Root(0, "Root")
 
 type IItem = { Name : string; }
 
+type MyUnion =
+    | A of int * string
+    | B of int * string
+    with member x.Id   = match x with | A (i,n) | B (i,n) -> i
+         member x.Name = match x with | A (i,n) -> n | _ -> "none"
+
 
 type ITree = 
     | IFace of IItem * ITree list
@@ -204,51 +210,51 @@ let previousMergeStrategy newInterface iface =
 
 
 let wrappedFace subs = IFace( { Name = "IShared" }, subs |> Seq.toList )
-
-let rec deepMerge (lhs : ITree) (rhs : ITree) : ITree =
-
-
-    printfn "\r\n::Deepmerge\r\n++++++++\r\n"
-    printfn "LHS::> %A\r\n" lhs
-    printfn "RHS::> %A\r\n" rhs
-    
-
-    let lhsFaces, lhsProps = lhs.Faces, lhs.Props
-    let rhsFaces, rhsProps = rhs.Faces, rhs.Props
-
-
-
-    
-    let finalFaces = lhsFaces @ rhsFaces |> set ... deepMerge rhsFaces lhsFaces ...
-    let finalProps = lhsProps @ rhsProps |> set
-
-
-
-    let combiFaces = lhsFaces @ rhsFaces
-    let final = 
-        combiFaces 
-        |> List.fold
-            (fun (combi :Set<ITree>) node ->
-                
-                printfn "Folding...\r\n"
-                printfn "Acc::> %A\r\n" combi
-                let newNew = deepMerge (combi |> Seq.head) node
-                printfn "Merg::> %A\r\n" newNew
-                combi.Add newNew 
-            )
-            (([ IFace( { Name = "IShared" }, [] ) ] : ITree list) |> set)
-
-
-    let combiProps = lhsProps @ rhsProps |> set
-    let fullProps = Set.union final combiProps
-//    let combiProps = 
-//        lhsProps @ rhsProps //@ final 
-//        |> set 
-//        |> Set.union final
-//        |> Set.toList
-    printfn "\r\n. . . . . . . . . . . . . . . . .\r\n\
-             Finalacc::> %A\r\n\r\nFullret::>%A\r\n\r\n--------------------------\r\n\r\n" final (IFace( { Name = "IShared" }, fullProps |> Set.toList))
-    IFace( { Name = "IShared" }, fullProps |> Set.toList)
+//
+//let rec deepMerge (lhs : ITree) (rhs : ITree) : ITree =
+//
+//
+//    printfn "\r\n::Deepmerge\r\n++++++++\r\n"
+//    printfn "LHS::> %A\r\n" lhs
+//    printfn "RHS::> %A\r\n" rhs
+//    
+//
+//    let lhsFaces, lhsProps = lhs.Faces, lhs.Props
+//    let rhsFaces, rhsProps = rhs.Faces, rhs.Props
+//
+//
+//
+//    
+//    let finalFaces = lhsFaces @ rhsFaces |> set ... deepMerge rhsFaces lhsFaces ...
+//    let finalProps = lhsProps @ rhsProps |> set
+//
+//
+//
+//    let combiFaces = lhsFaces @ rhsFaces
+//    let final = 
+//        combiFaces 
+//        |> List.fold
+//            (fun (combi :Set<ITree>) node ->
+//                
+//                printfn "Folding...\r\n"
+//                printfn "Acc::> %A\r\n" combi
+//                let newNew = deepMerge (combi |> Seq.head) node
+//                printfn "Merg::> %A\r\n" newNew
+//                combi.Add newNew 
+//            )
+//            (([ IFace( { Name = "IShared" }, [] ) ] : ITree list) |> set)
+//
+//
+//    let combiProps = lhsProps @ rhsProps |> set
+//    let fullProps = Set.union final combiProps
+////    let combiProps = 
+////        lhsProps @ rhsProps //@ final 
+////        |> set 
+////        |> Set.union final
+////        |> Set.toList
+//    printfn "\r\n. . . . . . . . . . . . . . . . .\r\n\
+//             Finalacc::> %A\r\n\r\nFullret::>%A\r\n\r\n--------------------------\r\n\r\n" final (IFace( { Name = "IShared" }, fullProps |> Set.toList))
+//    IFace( { Name = "IShared" }, fullProps |> Set.toList)
     // grab sub-sub interfaces and merge them
         // return the new merged items with a merged item?
 
@@ -282,7 +288,56 @@ let rec deepMerge (lhs : ITree) (rhs : ITree) : ITree =
 //    let finalSub = Set.union (newInterface.Sub |> set) (iface.Sub |> set) |> Set.toList
     
     // have to figure out which one is deeper?  Or perhaps iterate over extracted collections (for all interfaces between either side do...)
+type List<'a> with
+    member x.HasItems = 0 < x.Length
+
+let mergeFace ( lhs : ITree) (rhs : ITree) =
+    let f = [ IFace({ Name = "hey"}, []) ]
+    ()
+
+let propMerge (lhs : ITree) (rhs : ITree) =
+    lhs.Props @ rhs.Props |> set |> Set.toList
+
+let rec deeperMerge (lhs : ITree) (rhs : ITree) : ITree = 
+    let propsAtLevel = propMerge lhs rhs
+    let faces = lhs.Faces @ rhs.Faces
+    match faces.HasItems with
+    | true -> 
+        let mutable faceAcc = IFace({Name = "Generated"}, [])
+        let subFace = 
+            faces 
+            |> List.fold 
+                (fun a n -> 
+                    faceAcc <- deeperMerge a n
+                    faceAcc) 
+                (faceAcc)
+        IFace ( { Name = "SHARED" }, propsAtLevel @ subFace.Sub)
+    | false -> IFace ( { Name = "SHARED" }, propsAtLevel)
+
+let rec deepMerge (lhs : ITree) (rhs : ITree) : ITree = 
     
+    let ifaces = lhs.Faces @ rhs.Faces
+    printfn "GotL::  %A" lhs
+    printfn "GotR::  %A" rhs
+    printfn "IFACES::  %A" ifaces
+    let mutable ifaceAcc = (IFace ({ Name = "IAmMerged" }, []))
+    let mergedFaces = 
+        ifaces 
+        |> List.fold 
+            (fun acc node ->
+                ifaceAcc <- deepMerge acc node
+                ifaceAcc) 
+            (ifaceAcc)
+    let finalSubs = 
+        [mergedFaces] @ lhs.Props @ rhs.Props 
+        |> List.filter (function | IFace (n, []) -> false | _ -> true)
+        |> set 
+        |> Set.toList
+    IFace ({ Name = "IAmMerged" }, finalSubs)
+
+
+    // merge together children IFace
+    // collect props and add/set them together
 
 
 let rec interfaceTree (tree : ITree) =
@@ -322,7 +377,7 @@ let t5t = t5 |> findProps |> interfaceTree
 
 
 
-printfn "%s" (new System.String('\n', 3))
+jprintfn "%s" (new System.String('\n', 3))
 let t1t = t1 |> findProps |> interfaceTree
 let t2t = t2 |> findProps |> interfaceTree
 let t3t = t3 |> findProps |> interfaceTree
