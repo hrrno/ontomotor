@@ -199,7 +199,7 @@ let isInterfaceSubsetOf l2 l1 = Set.isSubset (set (l1:ITree).Sub) (set (l2:ITree
     
 let interfacesWithProperties = function | IFace (n, []) -> false | _ -> true
 let face (name, subs) = IFace ({ Name = name }, subs)
-let mergedFace subs = ("IAmMerged", subs) |> face
+let mergedFace subs = ("IShared", subs) |> face
 let emptyFace = ("IAmEmpty", []) |> face
 
 let rec deepMerge (lhs : ITree) (rhs : ITree) : ITree = 
@@ -226,7 +226,17 @@ let rec interfaceTree (tree : ITree) =
         | IProp _ -> node 
 
 
-    let handle iface interfaces newInterface = 
+    let handle2 iface interfaces newInterface = 
+        match iface with
+        | iface when iface |> isInterfaceSubsetOf newInterface -> 
+            iface |> removeFrom interfaces
+            newInterface
+        | iface when iface |> isPropertyMatchedWith newInterface ->
+            iface |> removeFrom interfaces
+            deepMerge newInterface iface  
+        | _ -> newInterface       
+
+    let handle interfaces iface newInterface = 
         match iface with
         | iface when iface |> isInterfaceSubsetOf newInterface -> 
             iface |> removeFrom interfaces
@@ -236,17 +246,28 @@ let rec interfaceTree (tree : ITree) =
             deepMerge newInterface iface  
         | _ -> newInterface        
 
+
     match tree.Sub with
     | [] -> [ emptyFace ]
     | x::xs -> 
         tree.Sub
         |> List.fold 
             (fun (interfaces:Set<ITree> ref) node -> 
-                let mutable newInterface = node |> extractInterface
+                let hi = handle interfaces
+                let ni = 
+                    interfaces |> withSubtree
+                    |> Set.fold (hi) //(fun acc iface -> handle iface interfaces acc) 
+                       (node |> extractInterface)
 
+                let mutable newInterface = node |> extractInterface
                 for iface in interfaces |> withSubtree do 
-                    newInterface <- handle iface interfaces newInterface                                     
-                ref ((!interfaces).Add newInterface))
+                    newInterface <- handle2 iface interfaces newInterface     
+                    
+                
+                printf "\r\n\r\nold: %A\r\n" newInterface
+                printf "new: %A\r\n\r\n\r\n" ni
+                                                                    
+                ref ((!interfaces).Add ni))
             accumulatorSeed 
         |> listFromRef
 
