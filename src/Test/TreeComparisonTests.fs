@@ -253,7 +253,7 @@ let rec interfaceTree (tree : ITree) =
                     newInterface <- merge interfaces iface newInterface     
                     
                 
-                printf "\r\n\r\nold: %A\r\n" newInterface
+//                printf "\r\n\r\nold: %A\r\n" newInterface
                 printf "new: %A\r\n\r\n\r\n" ni
                                                                     
                 ref ((!interfaces).Add ni))
