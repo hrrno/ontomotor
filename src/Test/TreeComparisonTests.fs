@@ -10,6 +10,7 @@ open MarkdownParser
 
 let inline add x y = x + y
 
+
 //[<Test>]
 //let ``When 2 is added to 2 expect 4``() = 
 //    add 2 2 |> should equal 4 
@@ -22,9 +23,6 @@ let inline add x y = x + y
 //  [<Test>]
 //  member x.SimpleTestico() = 
 //    1 |> should equal 1
-
-
-
     
 [<Test>]
 let ``When trees have matching content``() = 
@@ -39,17 +37,6 @@ let ``When trees have partially matching content``() =
     add 2 2 |> should equal 4 
 
 
-
-// we have:
-
-    // Aggregate matches (ie all items have a property if any have a property (limit interface to one level?))    
-    
-    // Unioned matches (ie only the items that exist for all children will be captured)
-
-// goals:
-
-    // List out the common properties
-    // List out the aggregate properties
 
 open MarkdownParser.Tokenize
 open Lex
@@ -146,7 +133,11 @@ let t5 = [ Root(0, "Root")
            Property(80, "secondprop: bow") 
          ] |> tokenTree
 
-type IItem = { Name : string; }
+
+
+
+
+
 
 type MyUnion =
     | A of int * string
@@ -154,6 +145,9 @@ type MyUnion =
     with member x.Id   = match x with | A (i,n) | B (i,n) -> i
          member x.Name = match x with | A (i,n) -> n | _ -> "none"
 
+
+
+type IItem = { Name : string; }
 
 type ITree = 
     | IFace of IItem * ITree list
@@ -188,7 +182,7 @@ let mutable accumulatorSeed : Set<ITree> ref = ref ([] |> Set.ofList)
 let withSubtree s = !(s:Set<ITree> ref) |> Set.filter (fun item -> not (item.Sub.IsEmpty))
 let removeFrom s item = (s:Set<ITree> ref) := (!s).Remove item
 let remove s item = (s:Set<ITree> ref) := (!s).Remove item
-let listFromRef s = !s |> Set.toList
+let toList s = !s |> Set.toList
 
 let propSet item = item |> justProps |> set
 let faceSet item = item |> justIFaces |> set
@@ -202,6 +196,7 @@ let face (name, subs) = IFace ({ Name = name }, subs)
 let mergedFace subs = ("IShared", subs) |> face
 let emptyFace = ("IAmEmpty", []) |> face
 
+
 let rec deepMerge (lhs : ITree) (rhs : ITree) : ITree = 
     let mergedSubFace = lhs.Faces @ rhs.Faces |> List.fold deepMerge emptyFace
 
@@ -212,12 +207,6 @@ let rec deepMerge (lhs : ITree) (rhs : ITree) : ITree =
     |> mergedFace
 
 
-let s = match "x" with
-        | "x" // when 1 = 1
-        | "x" -> "oi" // when 1 = 1 -> "hello34" 
-        | _ -> "no"
-
-
 let rec interfaceTree (tree : ITree) =
 
     let extractInterface node = 
@@ -225,43 +214,43 @@ let rec interfaceTree (tree : ITree) =
         | IFace _ -> face ("IShared", node |> interfaceTree)
         | IProp _ -> node 
 
+    let merge interfaces lhs rhs = 
+        match lhs with
+        | _ when lhs |> isInterfaceSubsetOf rhs -> 
+            lhs |> removeFrom interfaces
+            rhs
+        | _ when lhs |> isPropertyMatchedWith rhs ->
+            lhs |> removeFrom interfaces
+            deepMerge rhs lhs  
+        | _ -> rhs        
 
-    let handle2 iface interfaces newInterface = 
-        match iface with
-        | iface when iface |> isInterfaceSubsetOf newInterface -> 
-            iface |> removeFrom interfaces
-            newInterface
-        | iface when iface |> isPropertyMatchedWith newInterface ->
-            iface |> removeFrom interfaces
-            deepMerge newInterface iface  
-        | _ -> newInterface       
+    let mergeWith interfaces node =
+        interfaces 
+        |> withSubtree
+        |> Set.fold (merge interfaces) (node |> extractInterface)
 
-    let handle interfaces iface newInterface = 
-        match iface with
-        | iface when iface |> isInterfaceSubsetOf newInterface -> 
-            iface |> removeFrom interfaces
-            newInterface
-        | iface when iface |> isPropertyMatchedWith newInterface ->
-            iface |> removeFrom interfaces
-            deepMerge newInterface iface  
-        | _ -> newInterface        
-
+    let mergeAll (interfaces : Set<ITree> ref) node =
+        (!interfaces).Add (node |> mergeWith interfaces) 
+        |> ref
 
     match tree.Sub with
     | [] -> [ emptyFace ]
-    | x::xs -> 
+    | _ -> 
+//           tree.Sub
+//           |> List.fold mergeAll accumulatorSeed 
+//           |> toList
         tree.Sub
         |> List.fold 
             (fun (interfaces:Set<ITree> ref) node -> 
-                let hi = handle interfaces
+                //let hi = handle interfaces
                 let ni = 
                     interfaces |> withSubtree
-                    |> Set.fold (hi) //(fun acc iface -> handle iface interfaces acc) 
+                    |> Set.fold (merge interfaces) //(fun acc iface -> handle iface interfaces acc) 
                        (node |> extractInterface)
 
                 let mutable newInterface = node |> extractInterface
                 for iface in interfaces |> withSubtree do 
-                    newInterface <- handle2 iface interfaces newInterface     
+                    newInterface <- merge interfaces iface newInterface     
                     
                 
                 printf "\r\n\r\nold: %A\r\n" newInterface
@@ -269,11 +258,7 @@ let rec interfaceTree (tree : ITree) =
                                                                     
                 ref ((!interfaces).Add ni))
             accumulatorSeed 
-        |> listFromRef
-
-
-
-let t5t = t5 |> findProps |> interfaceTree
+        |> toList
 
 
 
@@ -282,10 +267,34 @@ let t1t = t1 |> findProps |> interfaceTree
 let t2t = t2 |> findProps |> interfaceTree
 let t3t = t3 |> findProps |> interfaceTree
 let t4t = t4 |> findProps |> interfaceTree
+let t5t = t5 |> findProps |> interfaceTree
 
 
 
 
+//    match tree.Sub with
+//    | [] -> [ emptyFace ]
+//    | x::xs -> 
+//        tree.Sub
+//        |> List.fold 
+//            (fun (interfaces:Set<ITree> ref) node -> 
+//                //let hi = handle interfaces
+//                let ni = 
+//                    interfaces |> withSubtree
+//                    |> Set.fold (handle interfaces) //(fun acc iface -> handle iface interfaces acc) 
+//                       (node |> extractInterface)
+//
+//                let mutable newInterface = node |> extractInterface
+//                for iface in interfaces |> withSubtree do 
+//                    newInterface <- handle2 iface interfaces newInterface     
+//                    
+//                
+//                printf "\r\n\r\nold: %A\r\n" newInterface
+//                printf "new: %A\r\n\r\n\r\n" ni
+//                                                                    
+//                ref ((!interfaces).Add newInterface))
+//            accumulatorSeed 
+//        |> listFromRef
 // TODO: figure out how to handle conflicting data types ie IOne.Prop : int vs ITwo.Prop : string [(an exception?)]
 
 
@@ -299,6 +308,4 @@ module Interface =
         t2.Print
 
 Interface.extract t1 t2
-
-
 
