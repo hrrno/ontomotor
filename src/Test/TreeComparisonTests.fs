@@ -181,162 +181,72 @@ let rec printProps (tree:ITree) =
     printfn "interface: %s = %s" tree.Item.Name tree.Item.Name
     match tree with
     | IProp _ -> ()
-    | IFace (item, sub) -> 
-        for s in sub do printProps s
-
-
-let iTree = findProps t2
-
-
-let printo li =  [for e in li do yield sprintf "%A" e ] |> String.concat ", "
+    | IFace (item, sub) -> for s in sub do printProps s
 
 
 let mutable accumulatorSeed : Set<ITree> ref = ref ([] |> Set.ofList)
 let withSubtree s = !(s:Set<ITree> ref) |> Set.filter (fun item -> not (item.Sub.IsEmpty))
 let removeFrom s item = (s:Set<ITree> ref) := (!s).Remove item
+let remove s item = (s:Set<ITree> ref) := (!s).Remove item
 let listFromRef s = !s |> Set.toList
 
 let propSet item = item |> justProps |> set
 let faceSet item = item |> justIFaces |> set
 let isPropertySubsetOf s2 s1 = Set.isSubset (s1 |> propSet) (s2 |> propSet)
+let isPropertyMatchedWith s2 s1 = s1 |> isPropertySubsetOf s2 || s2 |> isPropertySubsetOf s1
+    
 let isInterfaceSubsetOf l2 l1 = Set.isSubset (set (l1:ITree).Sub) (set (l2:ITree).Sub)
-
-
-
-//TODO: When merging property subsets sub interfaces are not merged accordingly
-//      I believe a recursive merge function needs to be developed and applied to all sub properties
-//      to get true sticky 'mergin' of the interfaces
-
-// have to support recursive merge here to put trees together...
-let previousMergeStrategy newInterface iface = 
-    let faces = Set.union (newInterface |> faceSet) (iface |> faceSet)
-    let props = Set.union (newInterface |> propSet) (iface |> propSet)
-    let finalSub = Set.union (newInterface.Sub |> set) (iface.Sub |> set) |> Set.toList
-    ()
-
-
-let wrappedFace subs = IFace( { Name = "IShared" }, subs |> Seq.toList )
-//
-//let rec deepMerge (lhs : ITree) (rhs : ITree) : ITree =
-//
-//
-//    printfn "\r\n::Deepmerge\r\n++++++++\r\n"
-//    printfn "LHS::> %A\r\n" lhs
-//    printfn "RHS::> %A\r\n" rhs
-//    
-//
-//    let lhsFaces, lhsProps = lhs.Faces, lhs.Props
-//    let rhsFaces, rhsProps = rhs.Faces, rhs.Props
-//
-//
-//
-//    
-//    let finalFaces = lhsFaces @ rhsFaces |> set ... deepMerge rhsFaces lhsFaces ...
-//    let finalProps = lhsProps @ rhsProps |> set
-//
-//
-//
-//    let combiFaces = lhsFaces @ rhsFaces
-//    let final = 
-//        combiFaces 
-//        |> List.fold
-//            (fun (combi :Set<ITree>) node ->
-//                
-//                printfn "Folding...\r\n"
-//                printfn "Acc::> %A\r\n" combi
-//                let newNew = deepMerge (combi |> Seq.head) node
-//                printfn "Merg::> %A\r\n" newNew
-//                combi.Add newNew 
-//            )
-//            (([ IFace( { Name = "IShared" }, [] ) ] : ITree list) |> set)
-//
-//
-//    let combiProps = lhsProps @ rhsProps |> set
-//    let fullProps = Set.union final combiProps
-////    let combiProps = 
-////        lhsProps @ rhsProps //@ final 
-////        |> set 
-////        |> Set.union final
-////        |> Set.toList
-//    printfn "\r\n. . . . . . . . . . . . . . . . .\r\n\
-//             Finalacc::> %A\r\n\r\nFullret::>%A\r\n\r\n--------------------------\r\n\r\n" final (IFace( { Name = "IShared" }, fullProps |> Set.toList))
-//    IFace( { Name = "IShared" }, fullProps |> Set.toList)
-    // grab sub-sub interfaces and merge them
-        // return the new merged items with a merged item?
-
-    // let finalSub = Set.union (newInterface.Sub |> set) (iface.Sub |> set) |> Set.toList
-    // newInterface <- IFace( { Name = "IShared" }, finalSub )
-
-
-
-
-
-
-//    printfn "Meeeerging\r\n"
-//    let lhsSubs = lhs |> justIFaces
-//    let rhsSubs = rhs |> justIFaces
-//    printfn "%A %A\r\n" lhsSubs rhsSubs
-//
-//    let lhsProps = lhs |> List.map justProps
-//    let rhsProps = rhs |> List.map justProps
-//    let props = lhsProps @ rhsProps |> set
-//    
-//    let combiFaces = deepMerge lhsSubs rhsSubs |> set
-//
-//    combiFaces 
-//    |> Set.union props
-//    |> wrappedFace
-
-//
-//    let faces = deepMerge lhsSubs rhsSubs
-//    let faces = Set.union (newInterface |> faceSet) (iface |> faceSet)
-//    let props = Set.union (newInterface |> propSet) (iface |> propSet)
-//    let finalSub = Set.union (newInterface.Sub |> set) (iface.Sub |> set) |> Set.toList
     
 let interfacesWithProperties = function | IFace (n, []) -> false | _ -> true
-let mergedIFace subs = IFace ({ Name = "IAmMerged" }, subs)
-let emptyIFace = mergedIFace []
+let face (name, subs) = IFace ({ Name = name }, subs)
+let mergedFace subs = ("IAmMerged", subs) |> face
+let emptyFace = ("IAmEmpty", []) |> face
 
 let rec deepMerge (lhs : ITree) (rhs : ITree) : ITree = 
-    let mergedFaces = 
-        lhs.Faces @ rhs.Faces 
-        |> List.fold deepMerge emptyIFace
+    let mergedSubFace = lhs.Faces @ rhs.Faces |> List.fold deepMerge emptyFace
 
-    [mergedFaces] @ lhs.Props @ rhs.Props 
+    [mergedSubFace] @ lhs.Props @ rhs.Props 
     |> List.filter interfacesWithProperties
     |> set 
     |> Set.toList
-    |> mergedIFace
+    |> mergedFace
+
+
+let s = match "x" with
+        | "x" // when 1 = 1
+        | "x" -> "oi" // when 1 = 1 -> "hello34" 
+        | _ -> "no"
 
 
 let rec interfaceTree (tree : ITree) =
+
+    let extractInterface node = 
+        match node with 
+        | IFace _ -> face ("IShared", node |> interfaceTree)
+        | IProp _ -> node 
+
+
+    let handle iface interfaces newInterface = 
+        match iface with
+        | iface when iface |> isInterfaceSubsetOf newInterface -> 
+            iface |> removeFrom interfaces
+            newInterface
+        | iface when iface |> isPropertyMatchedWith newInterface ->
+            iface |> removeFrom interfaces
+            deepMerge newInterface iface  
+        | _ -> newInterface        
+
     match tree.Sub with
-    | [] -> [ IFace( { Name = "IAmEmpty" }, [] )]
+    | [] -> [ emptyFace ]
     | x::xs -> 
         tree.Sub
         |> List.fold 
             (fun (interfaces:Set<ITree> ref) node -> 
-                let mutable newInterface = 
-                    match node with
-                    | IFace _ -> IFace( { Name = "IShared" }, node |> interfaceTree )
-                    | IProp _ -> node
-                
+                let mutable newInterface = node |> extractInterface
+
                 for iface in interfaces |> withSubtree do 
-                    if iface |> isInterfaceSubsetOf newInterface then
-                        iface |> removeFrom interfaces
-
-                    else if iface |> isPropertySubsetOf newInterface || newInterface |> isPropertySubsetOf iface then 
-                        
-                        printfn "\r\n--------------------------\r\nDeep merging\r\n"
-
-                        iface |> removeFrom interfaces
-                        newInterface <- deepMerge newInterface iface
-
-                        //let finalSub = Set.union (newInterface.Sub |> set) (iface.Sub |> set) |> Set.toList
-                        //newInterface <- IFace( { Name = "IShared" }, finalSub )
-                        
-                ref ((!interfaces).Add newInterface)
-                )
+                    newInterface <- handle iface interfaces newInterface                                     
+                ref ((!interfaces).Add newInterface))
             accumulatorSeed 
         |> listFromRef
 
@@ -353,19 +263,6 @@ let t3t = t3 |> findProps |> interfaceTree
 let t4t = t4 |> findProps |> interfaceTree
 
 
-
-
-// Split the trees branches into recursive sets: top and rest, fold top into rest
-//  Depending on merge logic either union or join
-//     Name conflicts and different types *should* result in a downcast (right?)
-//     Not liking the idea of modification... merge rules to change result?  Datatype "take the lowest of these"
-
-// Identify commonalities - tag?
-    // Create an aggregate
-    // Create a union
-
-    // Split the children into two trees and then return a result (union or join), of their children
-        // headers/"interfaces" are ignored, 
 
 
 // TODO: figure out how to handle conflicting data types ie IOne.Prop : int vs ITwo.Prop : string [(an exception?)]
