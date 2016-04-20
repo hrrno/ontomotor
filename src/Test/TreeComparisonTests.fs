@@ -135,16 +135,11 @@ let t5 = [ Root(0, "Root")
 
 
 
-
-
-
-
 type MyUnion =
     | A of int * string
     | B of int * string
     with member x.Id   = match x with | A (i,n) | B (i,n) -> i
          member x.Name = match x with | A (i,n) -> n | _ -> "none"
-
 
 
 type IItem = { Name : string; }
@@ -156,11 +151,6 @@ type ITree =
          member x.Sub  = match x with | IFace(n,sub) -> sub | IProp _ -> []
          member x.Props = x.Sub |> List.filter (function | IProp _ -> true | _ -> false)
          member x.Faces = x.Sub |> List.filter (function | IFace _ -> true | _ -> false)
-                 
-let props item = match item with | IProp _ -> true | _ -> false
-let ifaces item = match item with | IFace _ -> true | _ -> false
-let justProps item = (item:ITree).Sub |> List.filter props 
-let justIFaces item = (item:ITree).Sub |> List.filter ifaces 
 
 let rec findProps (Node(token, subTokens):TokenTree) : ITree =
     match token with 
@@ -177,19 +167,22 @@ let rec printProps (tree:ITree) =
     | IProp _ -> ()
     | IFace (item, sub) -> for s in sub do printProps s
 
-
-let mutable accumulatorSeed : Set<ITree> ref = ref ([] |> Set.ofList)
+                 
+let props item = match item with | IProp _ -> true | _ -> false
+let ifaces item = match item with | IFace _ -> true | _ -> false
+let justProps item = (item:ITree).Sub |> List.filter props 
+let justIFaces item = (item:ITree).Sub |> List.filter ifaces 
 let withSubtree s = !(s:Set<ITree> ref) |> Set.filter (fun item -> not (item.Sub.IsEmpty))
 let removeFrom s item = (s:Set<ITree> ref) := (!s).Remove item
 let addTo s item = (!(s:Set<ITree> ref)).Add item
 let remove s item = (s:Set<ITree> ref) := (!s).Remove item
 let toList s = !s |> Set.toList
+let mutable accumulatorSeed : Set<ITree> ref = ref ([] |> Set.ofList)
 
 let propSet item = item |> justProps |> set
 let faceSet item = item |> justIFaces |> set
 let isPropertySubsetOf s2 s1 = Set.isSubset (s1 |> propSet) (s2 |> propSet)
 let isPropertyMatchedWith s2 s1 = s1 |> isPropertySubsetOf s2 || s2 |> isPropertySubsetOf s1
-    
 let isInterfaceSubsetOf l2 l1 = Set.isSubset (set (l1:ITree).Sub) (set (l2:ITree).Sub)
     
 let (|InterfaceSubSet|_|) (lhs, rhs) = if lhs |> isInterfaceSubsetOf rhs then Some (lhs, rhs) else None
@@ -250,8 +243,7 @@ let rec interfaceTree (tree : ITree) =
            |> toList
 
 
-printf "--------------------------\r\n%s\r\n--------------------------\r\n" "L Merge with reversed match removal"
-let t5t = t5 |> findProps |> interfaceTree
+
 
 
 printfn "%s" (new System.String('\n', 3))
@@ -259,7 +251,7 @@ let t1t = t1 |> findProps |> interfaceTree
 let t2t = t2 |> findProps |> interfaceTree
 let t3t = t3 |> findProps |> interfaceTree
 let t4t = t4 |> findProps |> interfaceTree
-
+let t5t = t5 |> findProps |> interfaceTree
 
 
 
