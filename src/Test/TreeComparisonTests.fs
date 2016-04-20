@@ -192,8 +192,8 @@ let isPropertyMatchedWith s2 s1 = s1 |> isPropertySubsetOf s2 || s2 |> isPropert
     
 let isInterfaceSubsetOf l2 l1 = Set.isSubset (set (l1:ITree).Sub) (set (l2:ITree).Sub)
     
-let (|InterfaceSuperSet|_|) (lhs, rhs) = if lhs |> isInterfaceSubsetOf rhs then Some (lhs, rhs) else None
-let (|InterfaceSubSet|_|) (lhs, rhs) = if rhs |> isInterfaceSubsetOf lhs then Some (lhs, rhs) else None
+let (|InterfaceSubSet|_|) (lhs, rhs) = if lhs |> isInterfaceSubsetOf rhs then Some (lhs, rhs) else None
+let (|InterfaceSuperSet|_|) (lhs, rhs) = if rhs |> isInterfaceSubsetOf lhs then Some (lhs, rhs) else None
 let (|PropertyMatch|_|) (lhs, rhs) = if lhs |> isPropertyMatchedWith rhs then Some (lhs, rhs) else None
 
 let interfacesWithProperties = function | IFace (n, []) -> false | _ -> true
@@ -212,32 +212,29 @@ let rec deepMerge (lhs : ITree) (rhs : ITree) : ITree =
     |> mergedFace
 
 
-let merge (interfaces : Set<ITree> ref) (lhs : ITree) (rhs : ITree) = 
+let merge (interfaces : Set<ITree> ref) (rhs : ITree) (lhs : ITree)  = 
     match (lhs, rhs) with
-    | InterfaceSuperSet _ -> 
+    | InterfaceSubSet _ -> 
         lhs |> removeFrom interfaces
         rhs        
-    | InterfaceSubSet _ -> 
+    | InterfaceSuperSet _ -> 
         lhs
     | PropertyMatch _ ->
         lhs |> removeFrom interfaces
         deepMerge rhs lhs  
-    | _ -> rhs  
-
-let rmerge interfaces rhs lhs = merge interfaces lhs rhs
-
+    | _ -> rhs
 
 let rec interfaceTree (tree : ITree) =
 
     let extractInterface node = 
         match node with 
-        | IFace _ -> face ("IShared", node |> interfaceTree)
+        | IFace _ -> ("IShared", node |> interfaceTree) |> face
         | IProp _ -> node 
 
     let mergedWith interfaces node =
         interfaces 
         |> withSubtree
-        |> Set.fold (rmerge interfaces) (node |> extractInterface)
+        |> Set.fold (merge interfaces) (node |> extractInterface)
 
     let mergeAll (interfaces : Set<ITree> ref) node =
         node 
@@ -252,6 +249,8 @@ let rec interfaceTree (tree : ITree) =
            |> List.fold mergeAll accumulatorSeed  
            |> toList
 
+
+printf "--------------------------\r\n%s\r\n--------------------------\r\n" "L Merge with reversed match removal"
 let t5t = t5 |> findProps |> interfaceTree
 
 
