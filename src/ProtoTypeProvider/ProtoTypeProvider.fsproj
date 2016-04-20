@@ -40,6 +40,9 @@
     <Compile Include="..\Ontomotor\MarkdownParser.fs">
       <Link>MarkdownParser.fs</Link>
     </Compile>
+    <Compile Include="..\Ontomotor\MarkdownStructure.fs">
+      <Link>MarkdownStructure.fs</Link>
+    </Compile>
     <Compile Include="MarkdownFile.fs" />
     <None Include="test.fsx" />
     <Compile Include="ProtoTypeProvider.fs" />

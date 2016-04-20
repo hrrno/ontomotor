@@ -9,6 +9,8 @@ open ProviderImplementation.ProvidedTypes
 open Microsoft.FSharp.Core.CompilerServices
 open MarkdownParser
 open MarkdownParser.Tokenize
+open MarkdownStructure
+open MarkdownStructure.Interface
 
 [<AutoOpen>]
 module internal Utility =
@@ -140,17 +142,27 @@ module Provide =
                          propertyType = type', 
                          GetterCode = fun args -> getter)
 
-    let rec properties parentTy (Node(token, subtree):TokenTree) =
+    let interfaces (tree:TokenTree) = (tree, tree |> Interface.tree)
+
+    let rec properties parentTy ((Node(token, subtree):TokenTree), interfaces:ITree) =
         let containerTy = ProvidedTypeDefinition(token.Title + "Container", Some typeof<MarkdownElement>)
         let prop = token |> propFor containerTy 
 
+        // Need to grab the current interface (and feed them to the recursive algo underneath)
+        // Need to test for interface `fitness`
+        // Need to generate the type
+        // Need to attach the type
+
         for node in subtree do 
-            node |> properties containerTy 
+            (node, interfaces) |> properties containerTy 
 
         parentTy.AddMember prop
         parentTy.AddMember containerTy
         
     // TODO: the markdown source should provide a "toFile" method which uses the provided file names to call its properties
+
+    // TODO:  and for every `myFoo.Bar` method generate a module function `Foo.Bar a b = (fun (x : Foo) -> x.Bar(a, b))` alternative
+    
 
 open Provider 
 
@@ -172,7 +184,9 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
             | Provider.SingleFile ->
                 source 
                 |> Parse.file  
+                |> Provide.interfaces
                 |> Provide.properties proxyType 
+
                 
             | Provider.MultiFile -> 
 
@@ -189,10 +203,13 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
                                                    GetterCode = fun args -> <@@ new MarkdownFile(file) @@>)
                     file
                     |> Parse.file  
+                    |> Provide.interfaces
                     |> Provide.properties docType 
 
                     docCollectionType.AddMember docProp
                     proxyType.AddMember docType
+
+                //proxyType.AddInterfaceImplementation
 
                 proxyType.AddMember(ProvidedProperty(
                                         "Documents", docCollectionType,
