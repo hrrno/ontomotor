@@ -243,7 +243,36 @@ module Interface =
                    |> List.fold mergeAll accumulatorSeed  
                    |> toList
 
+
+       // test this....  tree based gen workin??
+
+        let rec mergedTree2 (tree : TokenTree) =
+
+            let extractInterface (node:TokenTree) = 
+                match node.Token with 
+                | Header _   | Root _ -> ("IShared", node |> mergedTree2) |> face
+                | Property _ | Yaml _ -> IProp({ Name = node.Token.Title }) 
+
+            let mergedWith interfaces node =
+                interfaces 
+                |> withSubtrees
+                |> Set.fold (merge interfaces) (node |> extractInterface)
+
+            let mergeAll (interfaces : Set<ITree> ref) node =
+                node 
+                |> mergedWith interfaces
+                |> addTo interfaces
+                |> ref
+
+            match tree.Sub with  // replace with deconstruction in parameter??
+            | [] -> [ emptyFace ]
+            | _ -> 
+                   tree.Sub
+                   |> List.fold mergeAll accumulatorSeed  
+                   |> toList
+
     let tree (tokens:TokenTree) = tokens |> (propertyTree >> mergedTree)
+    let tree2 (tokens:TokenTree) = tokens |>  mergedTree2
 
 
 
@@ -252,7 +281,7 @@ let t1t = t1 |> Interface.tree
 let t2t = t2 |> Interface.tree
 let t3t = t3 |> Interface.tree
 let t4t = t4 |> Interface.tree
-let t5t = t5 |> Interface.tree
+let t5t = t5 |> Interface.tree2
 
 
 

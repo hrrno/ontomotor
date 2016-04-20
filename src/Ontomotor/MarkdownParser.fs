@@ -83,9 +83,9 @@ module Lex =
             match tokens with
             | head::tail when comparisons.IsEmpty -> 
                 levels [0, head] (tokens) 0
-            | token0::token1::xs -> 
+            | token0::token1::tail -> 
                 let newOffset = calcOffset (token0, token1) offset
-                levels (comparisons @ [(newOffset, token1)]) (token1::xs) newOffset
+                levels (comparisons @ [(newOffset, token1)]) (token1::tail) newOffset
             | [_] | []   -> comparisons
 
         let rec buildTree offset trees list = 
