@@ -207,6 +207,10 @@ let rec deepMerge (lhs : ITree) (rhs : ITree) : ITree =
     |> mergedFace
 
 
+let (|InterfaceSuperSet|_|) (lhs, rhs) = if lhs |> isInterfaceSubsetOf rhs then Some (lhs, rhs) else None
+let (|InterfaceSubSet|_|) (lhs, rhs) = if rhs |> isInterfaceSubsetOf lhs then Some (lhs, rhs) else None
+let (|PropertyMatch|_|) (lhs, rhs) = if lhs |> isPropertyMatchedWith rhs then Some (lhs, rhs) else None
+
 let rec interfaceTree (tree : ITree) =
 
     let extractInterface node = 
@@ -214,16 +218,20 @@ let rec interfaceTree (tree : ITree) =
         | IFace _ -> face ("IShared", node |> interfaceTree)
         | IProp _ -> node 
 
-    let merge interfaces lhs rhs = 
-        printf "Mergin into: %A" interfaces
-        match lhs with
-        | _ when lhs |> isInterfaceSubsetOf rhs -> 
+    let merge (interfaces : Set<ITree> ref) (lhs : ITree) (rhs : ITree) = 
+        printf "Merge: %i\t%i\t%i" (!interfaces |> Set.count) (lhs.Sub.Length) (rhs.Sub.Length)
+        match (lhs, rhs) with
+        | InterfaceSuperSet _ -> 
             lhs |> removeFrom interfaces
-            rhs
-        | _ when lhs |> isPropertyMatchedWith rhs ->
+            rhs        
+        | InterfaceSubSet _ -> 
+            lhs
+        | PropertyMatch _ ->
             lhs |> removeFrom interfaces
             deepMerge rhs lhs  
         | _ -> rhs        
+
+    let rmerge interfaces rhs lhs = merge interfaces lhs rhs
 
     let mergeWith interfaces node =
         interfaces 
@@ -234,19 +242,23 @@ let rec interfaceTree (tree : ITree) =
         (!interfaces).Add (node |> mergeWith interfaces) 
         |> ref
 
+    let rollupMerge (interfaces : Set<ITree> ref) node = 
+        let mutable newInterface = node |> extractInterface
+        for iface in interfaces |> withSubtree do 
+            newInterface <- merge interfaces iface newInterface     
+        ref ((!interfaces).Add newInterface)
+
     match tree.Sub with
     | [] -> [ emptyFace ]
     | _ -> 
-        tree.Sub
-        |> List.fold 
-            (fun (interfaces:Set<ITree> ref) node -> 
-                let mutable newInterface = node |> extractInterface
-                for iface in interfaces |> withSubtree do 
-                    newInterface <- merge interfaces iface newInterface     
-                ref ((!interfaces).Add newInterface))
-            accumulatorSeed 
-        |> toList
+           tree.Sub
+           |> List.fold rollupMerge accumulatorSeed  //rollupMerge accumulatorSeed  //mergeAll accumulatorSeed 
+           |> toList
+//           tree.Sub
+//           |> List.fold rollupMerge accumulatorSeed 
+//           |> toList
 
+let t5t = t5 |> findProps |> interfaceTree
 
 
 printfn "%s" (new System.String('\n', 3))
@@ -254,7 +266,6 @@ let t1t = t1 |> findProps |> interfaceTree
 let t2t = t2 |> findProps |> interfaceTree
 let t3t = t3 |> findProps |> interfaceTree
 let t4t = t4 |> findProps |> interfaceTree
-let t5t = t5 |> findProps |> interfaceTree
 
 // FInal:
 //           tree.Sub
