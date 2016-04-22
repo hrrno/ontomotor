@@ -12,8 +12,11 @@ open MarkdownParser.Tokenize
 // 
 let foo = new Proto.TypeProvider.MarkdownProvider<"""C:\proj\ontomotor\src\data\test\test1\""">()
 
-foo.Documents.content_autoprops
-foo.Documents.content_autoprops_badstructure.Root.H1_1.H1_1_H2_1.Title
+foo.Documents.content_autoprops.GetType().GetInterfaces()
+let x = foo.Documents.content_autoprops.Root.Foo.Bar.GetType().GetInterfaces()
+let o = foo.Documents.content_autoprops.Root.Foo.Bar.Baz
+let d = foo.Documents.content_autoprops.Root.Foo.GetType().GetInterfaces()
+foo.Documents.content_autoprops_badstructure.Root.H1_1.H1_1_H2_1
 
 open Proto.TypeProviderType.Provide
 

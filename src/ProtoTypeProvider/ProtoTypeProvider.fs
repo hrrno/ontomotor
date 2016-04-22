@@ -80,10 +80,27 @@ module Provider =
                                     |> List.map(fun p -> new MarkdownFile(p)) )
                             ).Value
                         | SingleFile -> []
-                        
+
+    type ITesting = 
+        interface end    
+
+    type ITestVal = 
+        abstract member Zzz : int
+
+    type IHaveTitle = 
+        abstract member Title : string
+
+    type TTTEsting () = 
+        interface ITesting
+        with member x.Hey = 123
+
     type MarkdownElement =
         { Title: string; }
-
+//        interface IHaveTitle with 
+//            member x.Title = x.Title
+//        interface ITestVal with
+//            member x.Zzz = 654
+    
     module MarkdownDom =
         let create name =
             { Title = name } 
@@ -124,11 +141,23 @@ module Provide =
         let sep = CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator
         Double.Parse((str:string).Replace(".", sep).Replace(",", sep))
     
-    let propFor containerType token =
+    let mutable counter = 1
+    
+    let propFor (containerType : ProvidedTypeDefinition) token =
         let (type', getter:Quotations.Expr) =
             match token with
             | Root(i,c) | Header(i,c) ->
                 let title = token.Title
+                counter <- counter + 1
+                //let i = ProvidedTypeDefinition("I" + (String.replicate counter "a"), None, IsErased = false)
+                //i.SetAttributes (TypeAttributes.Public ||| TypeAttributes.Interface ||| TypeAttributes.Abstract)
+                //containerType.AddMember i
+
+
+                containerType.AddMember typeof<IHaveTitle>   // /zzz/ Not working... Adding interface to the record works, natch. Try and replicate the success by providing an implementation.  EMpty interfaces might be filtered out...
+
+
+
                 (containerType :> Type), <@@ MarkdownDom.create title @@>
             | Property _ | Yaml _ -> 
                 match token.Content with
@@ -143,26 +172,109 @@ module Provide =
                          GetterCode = fun args -> getter)
 
     let interfaces (tree:TokenTree) = (tree, tree |> Interface.tree)
+    
+    open System
+    open System.Reflection
+    open Microsoft.FSharp.Core.CompilerServices
+    open Microsoft.FSharp.Quotations
+
+    [<InterfaceAttribute>]
+    type INum =
+        abstract GetValue : unit -> int
+
+    [<InterfaceAttribute>]
+    type IHaveBaz =
+        abstract Baz : string
 
     let rec properties parentTy ((Node(token, subtree):TokenTree), interfaces:ITree) =
         let containerTy = ProvidedTypeDefinition(token.Title + "Container", Some typeof<MarkdownElement>)
         let prop = token |> propFor containerTy 
+
+        //render the ITree into actual types and then attach them to the container type
+        //containerTy.AddInterfaceImplementation typeof<generated interface...>
+
+        // Start out attaching simple props to objects
 
         // Need to grab the current interface (and feed them to the recursive algo underneath)
         // Need to test for interface `fitness`
         // Need to generate the type
         // Need to attach the type
 
+//        let i = ProvidedTypeDefinition("ITesting" + token.Title, None, IsErased = false)
+//        i.SetAttributes (TypeAttributes.Public ||| TypeAttributes.Interface ||| TypeAttributes.Abstract)
+
+        //containerTy.AddInterfaceImplementation typeof<ITesting>
+        
+
         for node in subtree do 
             (node, interfaces) |> properties containerTy 
 
+            let n = 123
+            // attach a generated interface for a known item to check functionality...
+            if token.Title = "Bar" then
+//                    let valueProp = 
+//                       ProvidedProperty("Value", 
+//                                        typeof<int>, 
+//                                        IsStatic = false,
+//                                        GetterCode = (fun args -> <@@ n @@>))
+//                    containerTy.AddMemberDelayed (fun () -> valueProp)
+
+
+
+
+            let addValueProperty (numberType : ProvidedTypeDefinition) (n : int) =
+                let valueProp = ProvidedProperty("Value", typeof<int>, IsStatic = false,
+                                                    GetterCode = (fun args -> <@@ n @@>))
+                numberType.AddMemberDelayed (fun () -> valueProp)
+
+                let igetMeth = typeof<INum>.GetMethod "GetValue"
+                let getV = 
+                    let code (_args: Expr list) = <@@ n @@>
+                    let m = ProvidedMethod("GetValue", [ ], typeof<int>, InvokeCode=code) 
+                    m.SetMethodAttrs(MethodAttributes.Virtual ||| MethodAttributes.HasSecurity ||| MethodAttributes.Final ||| MethodAttributes.NewSlot ||| MethodAttributes.Private)
+                    m
+                numberType.AddInterfaceImplementation typeof<INum>
+                numberType.DefineMethodOverride(getV, igetMeth)
+                numberType.AddMembers [ (getV :> MemberInfo) ]
+
+
+
+                    let igetMeth = containerTy.GetProperty "Baz" // typeof<containerTy>.GetMethod "GetValue"
+                    let igetProp = typeof<IHaveBaz>.GetProperty "Baz"
+                    let getV = 
+                        let code (_args: Expr list) = <@@ n @@>
+                        let pp = ProvidedProperty ("Baz", typeof<string>)
+                        
+                        let m = ProvidedMethod(
+                                  "GetValue", [ ], 
+                                  typeof<int>, InvokeCode=code) 
+                        m.SetMethodAttrs(MethodAttributes.Virtual 
+                                         ||| MethodAttributes.HasSecurity 
+                                         ||| MethodAttributes.Final 
+                                         ||| MethodAttributes.NewSlot 
+                                         ||| MethodAttributes.Private)
+                        m
+                    
+                    let prooop = containerTy.GetProperty "Title"
+                    let getP = ProvidedProperty ("Title", typeof<string>)
+                    containerTy.AddInterfaceImplementation typeof<IHaveTitle>
+                    //containerTy.DefineMethodOverride .DefineMethodOverride(getP, igetMeth)
+                    containerTy.AddMembers [ (getP :> PropertyInfo) ]
+                //type IHaveAFace = Baz : string
+            
+
+
+            // attach after construction, or on construction?
+
         parentTy.AddMember prop
         parentTy.AddMember containerTy
-        
+        // propOrDfault // attach a property or a dummy prop depending on the demands of the itnerface...    
+
+
+
     // TODO: the markdown source should provide a "toFile" method which uses the provided file names to call its properties
 
-    // TODO:  and for every `myFoo.Bar` method generate a module function `Foo.Bar a b = (fun (x : Foo) -> x.Bar(a, b))` alternative
-    
+        
 
 open Provider 
 

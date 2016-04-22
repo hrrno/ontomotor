@@ -57,6 +57,7 @@
     <None Include="markdown-dom-creation.fsx" />
     <None Include="markdown-dom-processor.fsx" />
     <None Include="markdown-dirty-parsing.fsx" />
+    <None Include="Currying.fsx" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="mscorlib" />
