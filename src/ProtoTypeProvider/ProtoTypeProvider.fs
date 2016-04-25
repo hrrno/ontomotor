@@ -305,28 +305,22 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
     
     let createInterface =
         let i = ProvidedTypeDefinition(Provider.assembly, Provider.namespace', "IZimbo", None, IsErased = false)
-        //i.AddMember(ProvidedConstructor([], InvokeCode =  fun _ -> <@@ new obj() @@>))
         i.SetAttributes (TypeAttributes.Public ||| TypeAttributes.Interface ||| TypeAttributes.Abstract)
         i
 
-    let testTooo = 
+    let createLocalInterface =
+        let i = ProvidedTypeDefinition("IZimbo", None, IsErased = false)
+        i.SetAttributes (TypeAttributes.Public ||| TypeAttributes.Interface ||| TypeAttributes.Abstract)
+        i
+
+    let testInterfaceImplementer = 
         let roo = ProvidedTypeDefinition(Provider.assembly, Provider.namespace', "InterfaceImpl", Some typeof<MarkdownTesting>, IsErased = false)
         roo.AddMember(ProvidedConstructor([], InvokeCode =  fun _ -> <@@ new MarkdownTesting() @@>))
-        roo.AddInterfaceImplementation createInterface
+        let local = createLocalInterface
+        roo.AddMember local
+        roo.AddInterfaceImplementation local
         roo
-
-    let testThreee = 
-        let roo = ProvidedTypeDefinition(Provider.assembly, Provider.namespace', "PleaseFindThis", Some typeof<obj>, IsErased = false)
-        roo.AddMember(ProvidedConstructor([], InvokeCode =  fun _ -> <@@ new obj() @@>))
-        roo
-
-
-    let createTestObj = 
-        let roo = ProvidedTypeDefinition(Provider.assembly, Provider.namespace', 
-                               "ConfirmedTest", Some typeof<MarkdownTesting>, IsErased = false)
-        roo.AddMember(ProvidedConstructor([], InvokeCode =  fun _ -> <@@ new MarkdownTesting() @@>))
-        roo
-
+        
     let createProxy =
         let proxyRoot = Provide.proxyType Provider.proxyName
 
@@ -383,7 +377,7 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
         )
         proxyRoot
     
-    do this.AddNamespace(Provider.namespace', [ createProxy; testTooo; createTestObj; ])
+    do this.AddNamespace(Provider.namespace', [ createProxy; testInterfaceImplementer; ])
     
 
 [<assembly:TypeProviderAssembly>] 
