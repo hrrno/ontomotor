@@ -67,6 +67,9 @@ module Provider =
         member this.Location with get () = Path.GetDirectoryName(filename)
         
 
+    type MarkdownTesting () =
+        member x.Name with get () = "abctest"
+
     type MarkdownSource (path) =
         member x.Source with get () = path
         member x.Mode with private get () = path |> mode
@@ -301,13 +304,27 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
     inherit TypeProviderForNamespaces()
     
     let createInterface =
-        let i = ProvidedTypeDefinition("AIZimbo", None, IsErased = false)
+        let i = ProvidedTypeDefinition(Provider.assembly, Provider.namespace', "IZimbo", None, IsErased = false)
+        //i.AddMember(ProvidedConstructor([], InvokeCode =  fun _ -> <@@ new obj() @@>))
         i.SetAttributes (TypeAttributes.Public ||| TypeAttributes.Interface ||| TypeAttributes.Abstract)
         i
 
+    let testTooo = 
+        let roo = ProvidedTypeDefinition(Provider.assembly, Provider.namespace', "PleaseFindThis1", Some typeof<MarkdownTesting>, IsErased = false)
+        roo.AddMember(ProvidedConstructor([], InvokeCode =  fun _ -> <@@ new MarkdownTesting() @@>))
+        roo
+
+    let testThreee = 
+        let roo = ProvidedTypeDefinition(Provider.assembly, Provider.namespace', "PleaseFindThis2", Some typeof<obj>, IsErased = false)
+        roo.AddMember(ProvidedConstructor([], InvokeCode =  fun _ -> <@@ new obj() @@>))
+        roo
+
+
     let createTestObj = 
-        ProvidedTypeDefinition("MarkdownSequence", Some typeof<obj>, HideObjectMethods = true)
-        
+        let roo = ProvidedTypeDefinition(Provider.assembly, Provider.namespace', 
+                               "ConfirmedTest", Some typeof<MarkdownTesting>, IsErased = false)
+        roo.AddMember(ProvidedConstructor([], InvokeCode =  fun _ -> <@@ new MarkdownTesting() @@>))
+        roo
 
     let createProxy =
         let proxyRoot = Provide.proxyType Provider.proxyName
@@ -365,7 +382,8 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
         )
         proxyRoot
     
-    do this.AddNamespace(Provider.namespace', [ createProxy; createInterface; createTestObj ])
+    do this.AddNamespace(Provider.namespace', [ createProxy; testTooo; testThreee; createTestObj; createInterface;  ]) //createProxy;   testThreee; createInterface; 
+    
 
 [<assembly:TypeProviderAssembly>] 
 do()

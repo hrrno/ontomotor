@@ -11,6 +11,15 @@ open MarkdownParser.Tokenize
 // Multi file test
 // 
 let foo = new Proto.TypeProvider.MarkdownProvider<"""C:\proj\ontomotor\src\data\test\test1\""">()
+Proto.TypeProvider
+type FFF = Proto.TypeProvider.ConfirmedTest
+let sss = new FFF()
+sss.Name
+//let roo = new Proto.TypeProvider.PleaseFindThis()
+
+type Aroo =
+    inherit Proto.TypeProvider
+    member x.Hoo = 2
 
 foo.Documents.content_autoprops.GetType().GetInterfaces()
 let x = foo.Documents.content_autoprops.Root.Foo.Bar.GetType().GetInterfaces()
