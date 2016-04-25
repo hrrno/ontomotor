@@ -141,20 +141,20 @@ module Provide =
         let sep = CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator
         Double.Parse((str:string).Replace(".", sep).Replace(",", sep))
     
-    let mutable counter = 1
+   // let mutable counter = 1
     
     let propFor (containerType : ProvidedTypeDefinition) token =
         let (type', getter:Quotations.Expr) =
             match token with
             | Root(i,c) | Header(i,c) ->
                 let title = token.Title
-                counter <- counter + 1
+                //counter <- counter + 1
                 //let i = ProvidedTypeDefinition("I" + (String.replicate counter "a"), None, IsErased = false)
                 //i.SetAttributes (TypeAttributes.Public ||| TypeAttributes.Interface ||| TypeAttributes.Abstract)
                 //containerType.AddMember i
 
 
-                containerType.AddMember typeof<IHaveTitle>   // /zzz/ Not working... Adding interface to the record works, natch. Try and replicate the success by providing an implementation.  EMpty interfaces might be filtered out...
+                //containerType.AddMember typeof<IHaveTitle>   // /zzz/ Not working... Adding interface to the record works, natch. Try and replicate the success by providing an implementation.  EMpty interfaces might be filtered out...
 
 
 
@@ -209,57 +209,75 @@ module Provide =
         for node in subtree do 
             (node, interfaces) |> properties containerTy 
 
-            let n = 123
+            
             // attach a generated interface for a known item to check functionality...
+
+
             if token.Title = "Bar" then
-//                    let valueProp = 
-//                       ProvidedProperty("Value", 
-//                                        typeof<int>, 
-//                                        IsStatic = false,
-//                                        GetterCode = (fun args -> <@@ n @@>))
-//                    containerTy.AddMemberDelayed (fun () -> valueProp)
 
 
+                let addValueProperty (numberType : ProvidedTypeDefinition) (n : int) =
+                    let valueProp = ProvidedProperty("Value", typeof<int>, IsStatic = false,
+                                                        GetterCode = (fun args -> <@@ n @@>))
+                    numberType.AddMemberDelayed (fun () -> valueProp)
 
-
-            let addValueProperty (numberType : ProvidedTypeDefinition) (n : int) =
-                let valueProp = ProvidedProperty("Value", typeof<int>, IsStatic = false,
-                                                    GetterCode = (fun args -> <@@ n @@>))
-                numberType.AddMemberDelayed (fun () -> valueProp)
-
-                let igetMeth = typeof<INum>.GetMethod "GetValue"
-                let getV = 
-                    let code (_args: Expr list) = <@@ n @@>
-                    let m = ProvidedMethod("GetValue", [ ], typeof<int>, InvokeCode=code) 
-                    m.SetMethodAttrs(MethodAttributes.Virtual ||| MethodAttributes.HasSecurity ||| MethodAttributes.Final ||| MethodAttributes.NewSlot ||| MethodAttributes.Private)
-                    m
-                numberType.AddInterfaceImplementation typeof<INum>
-                numberType.DefineMethodOverride(getV, igetMeth)
-                numberType.AddMembers [ (getV :> MemberInfo) ]
-
-
-
-                    let igetMeth = containerTy.GetProperty "Baz" // typeof<containerTy>.GetMethod "GetValue"
-                    let igetProp = typeof<IHaveBaz>.GetProperty "Baz"
+                    let igetMeth = typeof<INum>.GetMethod "GetValue"
                     let getV = 
                         let code (_args: Expr list) = <@@ n @@>
-                        let pp = ProvidedProperty ("Baz", typeof<string>)
-                        
-                        let m = ProvidedMethod(
-                                  "GetValue", [ ], 
-                                  typeof<int>, InvokeCode=code) 
-                        m.SetMethodAttrs(MethodAttributes.Virtual 
-                                         ||| MethodAttributes.HasSecurity 
-                                         ||| MethodAttributes.Final 
-                                         ||| MethodAttributes.NewSlot 
-                                         ||| MethodAttributes.Private)
+                        let m = ProvidedMethod("GetValue", [ ], typeof<int>, InvokeCode=code) 
+                        m.SetMethodAttrs(MethodAttributes.Virtual ||| MethodAttributes.HasSecurity ||| MethodAttributes.Final ||| MethodAttributes.NewSlot ||| MethodAttributes.Private)
                         m
-                    
-                    let prooop = containerTy.GetProperty "Title"
+                    numberType.AddInterfaceImplementation typeof<INum>
+                    numberType.DefineMethodOverride(getV, igetMeth)
+                    numberType.AddMembers [ (getV :> MemberInfo) ]
+
+                // not working - haven`t managed to attach even a known interface... maybe because of F# record semantics??
+                //containerTy.AddInterfaceImplementationsDelayed (fun _ -> [ typeof<IHaveTitle> ])
+
+//
+//                let igetMeth = containerTy.GetProperty "Baz" // typeof<containerTy>.GetMethod "GetValue"
+//                let igetProp = typeof<IHaveBaz>.GetProperty "Baz"
+//                let getV = 
+//                    let code (_args: Expr list) = <@@ n @@>
+//                    let pp = ProvidedProperty ("Baz", typeof<string>)
+//                        
+//                    let m = ProvidedMethod(
+//                                "GetValue", [ ], 
+//                                typeof<int>, InvokeCode=code) 
+//                    m
+
+
+                if false then
+                    //let prooop = containerTy.GetProperty "Title"
                     let getP = ProvidedProperty ("Title", typeof<string>)
                     containerTy.AddInterfaceImplementation typeof<IHaveTitle>
-                    //containerTy.DefineMethodOverride .DefineMethodOverride(getP, igetMeth)
-                    containerTy.AddMembers [ (getP :> PropertyInfo) ]
+                    //failwith "This code is running...."
+                    parentTy.AddMember typeof<IHaveTitle>
+
+
+                    let i = ProvidedTypeDefinition("IHaveBaz", None, IsErased = false)
+                    i.SetAttributes (TypeAttributes.Public ||| TypeAttributes.Interface ||| TypeAttributes.Abstract)
+                    failwith (i.GetType().Name)
+                    //containerTy.AddMember i
+                    parentTy.AddMembers [i]
+                    containerTy.AddInterfaceImplementation i
+
+
+//                 helloWorldTypeBuilder.AddInterfaceImplementation(typeof(IHello));
+//                 MethodBuilder myMethodBuilder =
+//                    helloWorldTypeBuilder.DefineMethod("SayHello",
+//                                         MethodAttributes.Public|MethodAttributes.Virtual,
+//                                         null,
+//                                         null);
+//                 // Generate IL for 'SayHello' method.
+//                 ILGenerator myMethodIL = myMethodBuilder.GetILGenerator();
+//                 myMethodIL.EmitWriteLine(myGreetingField);
+//                 myMethodIL.Emit(OpCodes.Ret);
+//                MethodInfo sayHelloMethod = typeof(IHello).GetMethod("SayHello");
+//                helloWorldTypeBuilder.DefineMethodOverride(myMethodBuilder,sayHelloMethod);
+
+
+                //containerTy.AddMembers [ (getP :> PropertyInfo) ]
                 //type IHaveAFace = Baz : string
             
 
@@ -282,6 +300,15 @@ open Provider
 type ProtoTypeProvider(config: TypeProviderConfig) as this = 
     inherit TypeProviderForNamespaces()
     
+    let createInterface =
+        let i = ProvidedTypeDefinition("AIZimbo", None, IsErased = false)
+        i.SetAttributes (TypeAttributes.Public ||| TypeAttributes.Interface ||| TypeAttributes.Abstract)
+        i
+
+    let createTestObj = 
+        ProvidedTypeDefinition("MarkdownSequence", Some typeof<obj>, HideObjectMethods = true)
+        
+
     let createProxy =
         let proxyRoot = Provide.proxyType Provider.proxyName
 
@@ -338,7 +365,7 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
         )
         proxyRoot
     
-    do this.AddNamespace(Provider.namespace', [ createProxy ])
+    do this.AddNamespace(Provider.namespace', [ createProxy; createInterface; createTestObj ])
 
 [<assembly:TypeProviderAssembly>] 
 do()
