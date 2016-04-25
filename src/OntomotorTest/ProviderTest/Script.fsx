@@ -11,22 +11,34 @@ open MarkdownParser.Tokenize
 // Multi file test
 // 
 let foo = new Proto.TypeProvider.MarkdownProvider<"""C:\proj\ontomotor\src\data\test\test1\""">()
+let moo = new Proto.TypeProvider.MarkdownProvider<"""C:\proj\ontomotor\src\data\test\test1\content-autoprops.md""">() //.RootContainer.FooContainer.BarContainer()
+let noo = moo.Root.Foo.Bar.GetType().GetInterfaces()
+
+
+
 //Proto.TypeProvider.IZimbo
-type FFF = Proto.TypeProvider.ConfirmedTest
+//type FFF = Proto.TypeProvider.ConfirmedTest
 type Zzzz = Proto.TypeProvider.InterfaceImpl
-type IFff = Proto.TypeProvider.IZimbo
-let sss = new FFF()
+//type IFff = Zzzz.IZimbo
+let sss = new Zzzz()
+//:> IFff
 sss.Name
 //let roo = new Proto.TypeProvider.PleaseFindThis()
 
-type Aroo =
-    member x.Hoo = 2
-
-    interface IFff 
+//type Aroo =
+//    member x.Hoo = 2
+//
+//    interface IFff 
     
 
 foo.Documents.content_autoprops.GetType().GetInterfaces()
 let x = foo.Documents.content_autoprops.Root.Foo.Bar.GetType().GetInterfaces()
+
+let roo = foo.Documents.content_autoprops.Root.Foo.Bar
+roo.RawRawr
+roo.GetType().GetInterfaces()
+
+let x1 = foo.Documents.content_autoprops.Root.Foo.Bar
 let o = foo.Documents.content_autoprops.Root.Foo.Bar.Baz
 let d = foo.Documents.content_autoprops.Root.Foo.GetType().GetInterfaces()
 foo.Documents.content_autoprops_badstructure.Root.H1_1.H1_1_H2_1

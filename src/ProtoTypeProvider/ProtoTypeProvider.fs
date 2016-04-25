@@ -216,54 +216,74 @@ module Provide =
             // attach a generated interface for a known item to check functionality...
 
 
-            if token.Title = "Bar" then
+        if token.Title = "Bar" then
+
+            let nameProp = ProvidedProperty(propertyName = "RawRawr", 
+                                        propertyType = typeof<string>,
+                                        GetterCode = fun _ -> <@@ "Aroooooo" @@>)
+            containerTy.AddMember nameProp
+
+            let createLocalInterface =
 
 
-                let addValueProperty (numberType : ProvidedTypeDefinition) (n : int) =
-                    let valueProp = ProvidedProperty("Value", typeof<int>, IsStatic = false,
-                                                        GetterCode = (fun args -> <@@ n @@>))
-                    numberType.AddMemberDelayed (fun () -> valueProp)
+                let i = ProvidedTypeDefinition("IAmAnInterfaaaaace", None, IsErased = false)
+                i.SetAttributes (TypeAttributes.Public ||| TypeAttributes.Interface ||| TypeAttributes.Abstract)
+                printf "I AM ATTACHING a property....\r\n"
+                let nameProp = ProvidedProperty(propertyName = "RawRawr", 
+                                                    propertyType = typeof<string>,
+                                                    GetterCode = fun _ -> <@@ () @@>)
 
-                    let igetMeth = typeof<INum>.GetMethod "GetValue"
-                    let getV = 
-                        let code (_args: Expr list) = <@@ n @@>
-                        let m = ProvidedMethod("GetValue", [ ], typeof<int>, InvokeCode=code) 
-                        m.SetMethodAttrs(MethodAttributes.Virtual ||| MethodAttributes.HasSecurity ||| MethodAttributes.Final ||| MethodAttributes.NewSlot ||| MethodAttributes.Private)
-                        m
-                    numberType.AddInterfaceImplementation typeof<INum>
-                    numberType.DefineMethodOverride(getV, igetMeth)
-                    numberType.AddMembers [ (getV :> MemberInfo) ]
-
-                // not working - haven`t managed to attach even a known interface... maybe because of F# record semantics??
-                //containerTy.AddInterfaceImplementationsDelayed (fun _ -> [ typeof<IHaveTitle> ])
-
+                i.AddMember nameProp
+                i
+            let local = createLocalInterface
+            containerTy.AddMember local
+            containerTy.AddInterfaceImplementation local
 //
-//                let igetMeth = containerTy.GetProperty "Baz" // typeof<containerTy>.GetMethod "GetValue"
-//                let igetProp = typeof<IHaveBaz>.GetProperty "Baz"
-//                let getV = 
-//                    let code (_args: Expr list) = <@@ n @@>
-//                    let pp = ProvidedProperty ("Baz", typeof<string>)
-//                        
-//                    let m = ProvidedMethod(
-//                                "GetValue", [ ], 
-//                                typeof<int>, InvokeCode=code) 
-//                    m
-
-
-                if false then
-                    //let prooop = containerTy.GetProperty "Title"
-                    let getP = ProvidedProperty ("Title", typeof<string>)
-                    containerTy.AddInterfaceImplementation typeof<IHaveTitle>
-                    //failwith "This code is running...."
-                    parentTy.AddMember typeof<IHaveTitle>
-
-
-                    let i = ProvidedTypeDefinition("IHaveBaz", None, IsErased = false)
-                    i.SetAttributes (TypeAttributes.Public ||| TypeAttributes.Interface ||| TypeAttributes.Abstract)
-                    failwith (i.GetType().Name)
-                    //containerTy.AddMember i
-                    parentTy.AddMembers [i]
-                    containerTy.AddInterfaceImplementation i
+//                let addValueProperty (numberType : ProvidedTypeDefinition) (n : int) =
+//                    let valueProp = ProvidedProperty("Value", typeof<int>, IsStatic = false,
+//                                                        GetterCode = (fun args -> <@@ n @@>))
+//                    numberType.AddMemberDelayed (fun () -> valueProp)
+//
+//                    let igetMeth = typeof<INum>.GetMethod "GetValue"
+//                    let getV = 
+//                        let code (_args: Expr list) = <@@ n @@>
+//                        let m = ProvidedMethod("GetValue", [ ], typeof<int>, InvokeCode=code) 
+//                        m.SetMethodAttrs(MethodAttributes.Virtual ||| MethodAttributes.HasSecurity ||| MethodAttributes.Final ||| MethodAttributes.NewSlot ||| MethodAttributes.Private)
+//                        m
+//                    numberType.AddInterfaceImplementation typeof<INum>
+//                    numberType.DefineMethodOverride(getV, igetMeth)
+//                    numberType.AddMembers [ (getV :> MemberInfo) ]
+//
+//                // not working - haven`t managed to attach even a known interface... maybe because of F# record semantics??
+//                //containerTy.AddInterfaceImplementationsDelayed (fun _ -> [ typeof<IHaveTitle> ])
+//
+////
+////                let igetMeth = containerTy.GetProperty "Baz" // typeof<containerTy>.GetMethod "GetValue"
+////                let igetProp = typeof<IHaveBaz>.GetProperty "Baz"
+////                let getV = 
+////                    let code (_args: Expr list) = <@@ n @@>
+////                    let pp = ProvidedProperty ("Baz", typeof<string>)
+////                        
+////                    let m = ProvidedMethod(
+////                                "GetValue", [ ], 
+////                                typeof<int>, InvokeCode=code) 
+////                    m
+//
+//
+//                if false then
+//                    //let prooop = containerTy.GetProperty "Title"
+//                    let getP = ProvidedProperty ("Title", typeof<string>)
+//                    containerTy.AddInterfaceImplementation typeof<IHaveTitle>
+//                    //failwith "This code is running...."
+//                    parentTy.AddMember typeof<IHaveTitle>
+//
+//
+//                    let i = ProvidedTypeDefinition("IHaveBaz", None, IsErased = false)
+//                    i.SetAttributes (TypeAttributes.Public ||| TypeAttributes.Interface ||| TypeAttributes.Abstract)
+//                    failwith (i.GetType().Name)
+//                    //containerTy.AddMember i
+//                    parentTy.AddMembers [i]
+//                    containerTy.AddInterfaceImplementation i
 
 
 //                 helloWorldTypeBuilder.AddInterfaceImplementation(typeof(IHello));
@@ -311,6 +331,12 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
     let createLocalInterface =
         let i = ProvidedTypeDefinition("IZimbo", None, IsErased = false)
         i.SetAttributes (TypeAttributes.Public ||| TypeAttributes.Interface ||| TypeAttributes.Abstract)
+
+        let nameProp = ProvidedProperty(propertyName = "Name", 
+                                         propertyType = typeof<string>,
+                                         GetterCode = fun _ -> <@@ () @@>)
+
+        i.AddMember nameProp
         i
 
     let testInterfaceImplementer = 
