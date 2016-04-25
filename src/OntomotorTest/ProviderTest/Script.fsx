@@ -7,47 +7,72 @@
 #r @"../../ProtoTypeProvider/bin/Debug/ProtoTypeProvider.dll"
 open MarkdownParser
 open MarkdownParser.Tokenize
+open System.Reflection
 
 // Multi file test
 // 
 let foo = new Proto.TypeProvider.MarkdownProvider<"""C:\proj\ontomotor\src\data\test\test1\""">()
-let moo = new Proto.TypeProvider.MarkdownProvider<"""C:\proj\ontomotor\src\data\test\test1\content-autoprops.md""">() //.RootContainer.FooContainer.BarContainer()
-let noo = moo.Root.Foo.Bar.GetType().GetInterfaces()
+//let moo = new Proto.TypeProvider.MarkdownProvider<"""C:\proj\ontomotor\src\data\test\test1\content-autoprops.md""">() //.RootContainer.FooContainer.BarContainer()
+//let fff = moo.Root.Foo.Bar.RawRawr
+//let zoo = new Proto.TypeProvider.InterfaceImpl.IZimbo
+//type IImpl = Proto.TypeProvider.InterfaceImpl
+//let rawr = new IImpl()
+//
+//System.AppDomain.CurrentDomain.ReflectionOnlyGetAssemblies()
+//
+//let unf : Unit = 
+//    try
+//        let d = [ for t in Assembly.GetExecutingAssembly().GetTypes() do   
+//                    printfn "%s" t.FullName // a.FullName
+//                    //for t in a.GetTypes() do
+//                        //printfn "%s\r\n" t.Name
+//                    if (t.IsInterface && t.Namespace.Contains("proto")) then
+//                            
+//                        yield t
+//                ]
+//        ()
+//    with 
+//    | :? System.Reflection.ReflectionTypeLoadException as ex -> 
+//        let rawr = ex.LoaderExceptions |> Array.map (fun e -> e.Message) |> String.concat "\r\n" 
+//        printfn "\r\nHere are the issues:\r\n%s" rawr
+//        ()
+
+//let noo = moo.Root.Foo.Bar.GetType().GetInterfaces()
 
 
 
 //Proto.TypeProvider.IZimbo
 //type FFF = Proto.TypeProvider.ConfirmedTest
-type Zzzz = Proto.TypeProvider.InterfaceImpl
-//type IFff = Zzzz.IZimbo
-let sss = new Zzzz()
-//:> IFff
-sss.Name
-//let roo = new Proto.TypeProvider.PleaseFindThis()
+//type Zzzz = Proto.TypeProvider.InterfaceImpl
+////type IFff = Zzzz.IZimbo
+//let sss = new Zzzz()
+////:> IFff
+//sss.Name
+////let roo = new Proto.TypeProvider.PleaseFindThis()
 
 //type Aroo =
 //    member x.Hoo = 2
 //
 //    interface IFff 
     
+//let RARRA = foo.Documents.content_autoprops.Root
+//foo.Documents.content_autoprops.Root.Foo.Title // .Location // .content_autoprops.GetType().GetInterfaces()
+//let x = foo.Documents.content_autoprops.Root.Foo.Bar.GetType().GetInterfaces()
+//
+//let roo = foo.Documents.content_autoprops.Root.Foo.Bar
+//roo.RawRawr
+//roo.GetType().GetInterfaces()
 
-foo.Documents.content_autoprops.GetType().GetInterfaces()
-let x = foo.Documents.content_autoprops.Root.Foo.Bar.GetType().GetInterfaces()
-
-let roo = foo.Documents.content_autoprops.Root.Foo.Bar
-roo.RawRawr
-roo.GetType().GetInterfaces()
-
-let x1 = foo.Documents.content_autoprops.Root.Foo.Bar
+let x = foo.Documents.content_autoprops.Root.Foo.Bar
 let o = foo.Documents.content_autoprops.Root.Foo.Bar.Baz
 let d = foo.Documents.content_autoprops.Root.Foo.GetType().GetInterfaces()
+let d = foo.Documents.content_autoprops.Root.Foo.Bar.GetType().GetInterfaces()
 foo.Documents.content_autoprops_badstructure.Root.H1_1.H1_1_H2_1
 
-open Proto.TypeProviderType.Provide
 
-for d in foo.Docs do
-    printfn "%s" d.Location
-foo.Docs |> Seq.length
+//for d in foo.Docs do
+//    printfn "%s" d.Location
+//foo.Docs |> Seq.length
 
 //foo.GetType().GetProperties()
 //foo.GetType().GetProperty("Documents").GetValue(foo)

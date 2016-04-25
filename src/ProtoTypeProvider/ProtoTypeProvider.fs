@@ -189,10 +189,6 @@ module Provide =
     type IHaveBaz =
         abstract Baz : string
 
-    let rec properties parentTy ((Node(token, subtree):TokenTree), interfaces:ITree) =
-        let containerTy = ProvidedTypeDefinition(token.Title + "Container", Some typeof<MarkdownElement>)
-        let prop = token |> propFor containerTy 
-
         //render the ITree into actual types and then attach them to the container type
         //containerTy.AddInterfaceImplementation typeof<generated interface...>
 
@@ -203,109 +199,38 @@ module Provide =
         // Need to generate the type
         // Need to attach the type
 
-//        let i = ProvidedTypeDefinition("ITesting" + token.Title, None, IsErased = false)
-//        i.SetAttributes (TypeAttributes.Public ||| TypeAttributes.Interface ||| TypeAttributes.Abstract)
-
-        //containerTy.AddInterfaceImplementation typeof<ITesting>
+    let rec properties parentTy ((Node(token, subtree):TokenTree), interfaces:ITree) =
+        let containerTy = ProvidedTypeDefinition(token.Title + "Container", Some typeof<MarkdownElement>)
+        let prop = token |> propFor containerTy 
         
-
         for node in subtree do 
             (node, interfaces) |> properties containerTy 
 
-            
             // attach a generated interface for a known item to check functionality...
 
 
-        if token.Title = "Bar" then
-
-            let nameProp = ProvidedProperty(propertyName = "RawRawr", 
-                                        propertyType = typeof<string>,
-                                        GetterCode = fun _ -> <@@ "Aroooooo" @@>)
-            containerTy.AddMember nameProp
-
-            let createLocalInterface =
-
-
-                let i = ProvidedTypeDefinition("IAmAnInterfaaaaace", None, IsErased = false)
-                i.SetAttributes (TypeAttributes.Public ||| TypeAttributes.Interface ||| TypeAttributes.Abstract)
-                printf "I AM ATTACHING a property....\r\n"
-                let nameProp = ProvidedProperty(propertyName = "RawRawr", 
-                                                    propertyType = typeof<string>,
-                                                    GetterCode = fun _ -> <@@ () @@>)
-
-                i.AddMember nameProp
-                i
-            let local = createLocalInterface
-            containerTy.AddMember local
-            containerTy.AddInterfaceImplementation local
+//        if token.Title = "Bar" then
 //
-//                let addValueProperty (numberType : ProvidedTypeDefinition) (n : int) =
-//                    let valueProp = ProvidedProperty("Value", typeof<int>, IsStatic = false,
-//                                                        GetterCode = (fun args -> <@@ n @@>))
-//                    numberType.AddMemberDelayed (fun () -> valueProp)
+//            let nameProp = ProvidedProperty(propertyName = "RawRawr", 
+//                                        propertyType = typeof<string>,
+//                                        GetterCode = fun _ -> <@@ "Aroooooo" @@>)
+//            containerTy.AddMember nameProp
 //
-//                    let igetMeth = typeof<INum>.GetMethod "GetValue"
-//                    let getV = 
-//                        let code (_args: Expr list) = <@@ n @@>
-//                        let m = ProvidedMethod("GetValue", [ ], typeof<int>, InvokeCode=code) 
-//                        m.SetMethodAttrs(MethodAttributes.Virtual ||| MethodAttributes.HasSecurity ||| MethodAttributes.Final ||| MethodAttributes.NewSlot ||| MethodAttributes.Private)
-//                        m
-//                    numberType.AddInterfaceImplementation typeof<INum>
-//                    numberType.DefineMethodOverride(getV, igetMeth)
-//                    numberType.AddMembers [ (getV :> MemberInfo) ]
-//
-//                // not working - haven`t managed to attach even a known interface... maybe because of F# record semantics??
-//                //containerTy.AddInterfaceImplementationsDelayed (fun _ -> [ typeof<IHaveTitle> ])
-//
-////
-////                let igetMeth = containerTy.GetProperty "Baz" // typeof<containerTy>.GetMethod "GetValue"
-////                let igetProp = typeof<IHaveBaz>.GetProperty "Baz"
-////                let getV = 
-////                    let code (_args: Expr list) = <@@ n @@>
-////                    let pp = ProvidedProperty ("Baz", typeof<string>)
-////                        
-////                    let m = ProvidedMethod(
-////                                "GetValue", [ ], 
-////                                typeof<int>, InvokeCode=code) 
-////                    m
+//            let createLocalInterface =
 //
 //
-//                if false then
-//                    //let prooop = containerTy.GetProperty "Title"
-//                    let getP = ProvidedProperty ("Title", typeof<string>)
-//                    containerTy.AddInterfaceImplementation typeof<IHaveTitle>
-//                    //failwith "This code is running...."
-//                    parentTy.AddMember typeof<IHaveTitle>
+//                let i = ProvidedTypeDefinition("IAmAnInterfaaaaace", None, IsErased = false)
+//                i.SetAttributes (TypeAttributes.Public ||| TypeAttributes.Interface ||| TypeAttributes.Abstract)
+//                printf "I AM ATTACHING a property....\r\n"
+//                let nameProp = ProvidedProperty(propertyName = "RawRawr", 
+//                                                    propertyType = typeof<string>,
+//                                                    GetterCode = fun _ -> <@@ () @@>)
 //
-//
-//                    let i = ProvidedTypeDefinition("IHaveBaz", None, IsErased = false)
-//                    i.SetAttributes (TypeAttributes.Public ||| TypeAttributes.Interface ||| TypeAttributes.Abstract)
-//                    failwith (i.GetType().Name)
-//                    //containerTy.AddMember i
-//                    parentTy.AddMembers [i]
-//                    containerTy.AddInterfaceImplementation i
-
-
-//                 helloWorldTypeBuilder.AddInterfaceImplementation(typeof(IHello));
-//                 MethodBuilder myMethodBuilder =
-//                    helloWorldTypeBuilder.DefineMethod("SayHello",
-//                                         MethodAttributes.Public|MethodAttributes.Virtual,
-//                                         null,
-//                                         null);
-//                 // Generate IL for 'SayHello' method.
-//                 ILGenerator myMethodIL = myMethodBuilder.GetILGenerator();
-//                 myMethodIL.EmitWriteLine(myGreetingField);
-//                 myMethodIL.Emit(OpCodes.Ret);
-//                MethodInfo sayHelloMethod = typeof(IHello).GetMethod("SayHello");
-//                helloWorldTypeBuilder.DefineMethodOverride(myMethodBuilder,sayHelloMethod);
-
-
-                //containerTy.AddMembers [ (getP :> PropertyInfo) ]
-                //type IHaveAFace = Baz : string
-            
-
-
-            // attach after construction, or on construction?
+//                i.AddMember nameProp
+//                i
+//            let local = createLocalInterface
+//            containerTy.AddMember local
+//            containerTy.AddInterfaceImplementation local
 
         parentTy.AddMember prop
         parentTy.AddMember containerTy
@@ -329,7 +254,7 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
         i
 
     let createLocalInterface =
-        let i = ProvidedTypeDefinition("IZimbo", None, IsErased = false)
+        let i = ProvidedTypeDefinition("IZimbo", None)
         i.SetAttributes (TypeAttributes.Public ||| TypeAttributes.Interface ||| TypeAttributes.Abstract)
 
         let nameProp = ProvidedProperty(propertyName = "Name", 
@@ -340,7 +265,7 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
         i
 
     let testInterfaceImplementer = 
-        let roo = ProvidedTypeDefinition(Provider.assembly, Provider.namespace', "InterfaceImpl", Some typeof<MarkdownTesting>, IsErased = false)
+        let roo = ProvidedTypeDefinition(Provider.assembly, Provider.namespace', "InterfaceImpl", Some typeof<MarkdownTesting>)
         roo.AddMember(ProvidedConstructor([], InvokeCode =  fun _ -> <@@ new MarkdownTesting() @@>))
         let local = createLocalInterface
         roo.AddMember local
@@ -403,7 +328,7 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
         )
         proxyRoot
     
-    do this.AddNamespace(Provider.namespace', [ createProxy; testInterfaceImplementer; ])
+    do this.AddNamespace(Provider.namespace', [ createProxy; ]) //testInterfaceImplementer; 
     
 
 [<assembly:TypeProviderAssembly>] 
