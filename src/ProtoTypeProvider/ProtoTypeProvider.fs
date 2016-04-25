@@ -310,12 +310,13 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
         i
 
     let testTooo = 
-        let roo = ProvidedTypeDefinition(Provider.assembly, Provider.namespace', "PleaseFindThis1", Some typeof<MarkdownTesting>, IsErased = false)
+        let roo = ProvidedTypeDefinition(Provider.assembly, Provider.namespace', "InterfaceImpl", Some typeof<MarkdownTesting>, IsErased = false)
         roo.AddMember(ProvidedConstructor([], InvokeCode =  fun _ -> <@@ new MarkdownTesting() @@>))
+        roo.AddInterfaceImplementation createInterface
         roo
 
     let testThreee = 
-        let roo = ProvidedTypeDefinition(Provider.assembly, Provider.namespace', "PleaseFindThis2", Some typeof<obj>, IsErased = false)
+        let roo = ProvidedTypeDefinition(Provider.assembly, Provider.namespace', "PleaseFindThis", Some typeof<obj>, IsErased = false)
         roo.AddMember(ProvidedConstructor([], InvokeCode =  fun _ -> <@@ new obj() @@>))
         roo
 
@@ -382,7 +383,7 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
         )
         proxyRoot
     
-    do this.AddNamespace(Provider.namespace', [ createProxy; testTooo; testThreee; createTestObj; createInterface;  ]) //createProxy;   testThreee; createInterface; 
+    do this.AddNamespace(Provider.namespace', [ createProxy; testTooo; createTestObj; ])
     
 
 [<assembly:TypeProviderAssembly>] 

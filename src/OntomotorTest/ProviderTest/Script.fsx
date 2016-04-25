@@ -13,6 +13,7 @@ open MarkdownParser.Tokenize
 let foo = new Proto.TypeProvider.MarkdownProvider<"""C:\proj\ontomotor\src\data\test\test1\""">()
 //Proto.TypeProvider.IZimbo
 type FFF = Proto.TypeProvider.ConfirmedTest
+type Zzzz = Proto.TypeProvider.InterfaceImpl
 type IFff = Proto.TypeProvider.IZimbo
 let sss = new FFF()
 sss.Name
@@ -120,9 +121,6 @@ foo
 
 
 
-
-foo.Filename
-foo.Location
 
 
 
