@@ -84,26 +84,9 @@ module Provider =
                             ).Value
                         | SingleFile -> []
 
-    type ITesting = 
-        interface end    
-
-    type ITestVal = 
-        abstract member Zzz : int with get, set
-
-    type IHaveTitle = 
-        abstract member Title : string
-
-    type TTTEsting () = 
-        interface ITesting
-        with member x.Hey = 123
-
     type MarkdownElement =
         { Title: string; }
-//        interface IHaveTitle with 
-//            member x.Title = x.Title
-//        interface ITestVal with
-//            member x.Zzz = 654
-    
+
     module MarkdownDom =
         let create name =
             { Title = name } 
@@ -144,23 +127,12 @@ module Provide =
         let sep = CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator
         Double.Parse((str:string).Replace(".", sep).Replace(",", sep))
     
-   // let mutable counter = 1
     
     let propFor (containerType : ProvidedTypeDefinition) token =
         let (type', getter:Quotations.Expr) =
             match token with
             | Root(i,c) | Header(i,c) ->
                 let title = token.Title
-                //counter <- counter + 1
-                //let i = ProvidedTypeDefinition("I" + (String.replicate counter "a"), None, IsErased = false)
-                //i.SetAttributes (TypeAttributes.Public ||| TypeAttributes.Interface ||| TypeAttributes.Abstract)
-                //containerType.AddMember i
-
-
-                //containerType.AddMember typeof<IHaveTitle>   // /zzz/ Not working... Adding interface to the record works, natch. Try and replicate the success by providing an implementation.  EMpty interfaces might be filtered out...
-
-
-
                 (containerType :> Type), <@@ MarkdownDom.create title @@>
             | Property _ | Yaml _ -> 
                 match token.Content with
@@ -174,21 +146,50 @@ module Provide =
                          propertyType = type', 
                          GetterCode = fun args -> getter)
 
-    let interfaces (tree:TokenTree) = (tree, tree |> Interface.tree)
+    let makeProp (foo:ITree) = 
+        let prop = match foo with | IProp el -> el | _ -> failwith "Properties should only come from IProp's"
+        ProvidedProperty(propertyName = prop.Name, 
+                         propertyType = typeof<string>, 
+                         GetterCode = fun args -> <@@ "[emptyprop]" @@>)
+
+    let rec baseclassTypeTree (tree:ITree) =
+        let faces, props = tree.Faces, tree.Props
+        let newType = ProvidedTypeDefinition(tree.Item.Name + "Base", Some typeof<MarkdownElement>)
+        for f in faces do 
+                newType.AddMember (f |> baseclassTypeTree)
+
+        for p in props do
+            newType.AddMember (p |> makeProp)
+        newType
+        //(tree, newType)
+
+
+    let ripOutFaces (tree:ITree) =
+        let rawr = 
+            seq {
+                let rec ooooo = yield! "oi"
+                "0"
+                //for i in 1 .. 10 do ooooo
+            }
+        let faces = 
+            [ 
+                
+                for t in tree.Sub do yield "hey" 
+            ]
+        let rec recurse = "ok"
+        "2"
+
+    let interfaces (tree:TokenTree) = 
+        let interfaces = tree |> Interface.tree
+
+        let typeTree = interfaces |> baseclassTypeTree
+
+        (tree, tree |> Interface.tree)
+        
+        // return a TokenTree * Type tree
+            // use the types in the prop gen function to gen props
+
     
-    open System
-    open System.Reflection
-    open Microsoft.FSharp.Core.CompilerServices
-    open Microsoft.FSharp.Quotations
-
-    [<InterfaceAttribute>]
-    type INum =
-        abstract GetValue : unit -> int
-
-    [<InterfaceAttribute>]
-    type IHaveBaz =
-        abstract Baz : string
-
         //render the ITree into actual types and then attach them to the container type
         //containerTy.AddInterfaceImplementation typeof<generated interface...>
 
@@ -205,33 +206,6 @@ module Provide =
         
         for node in subtree do 
             (node, interfaces) |> properties containerTy 
-
-            // attach a generated interface for a known item to check functionality...
-
-
-        if token.Title = "Bar" then
-
-            let nameProp = ProvidedProperty(propertyName = "RawRawr", 
-                                        propertyType = typeof<string>,
-                                        GetterCode = fun _ -> <@@ "Aroooooo" @@>)
-            //containerTy.AddMember nameProp
-
-            let createLocalInterface =
-
-
-                let i = ProvidedTypeDefinition("IAmAnInterfaaaaace", None, IsErased = false)
-                i.SetAttributes (TypeAttributes.Public ||| TypeAttributes.Interface ||| TypeAttributes.Abstract)
-                printf "I AM ATTACHING a property....\r\n"
-                let nameProp = ProvidedProperty(propertyName = "RawRawr", 
-                                                    propertyType = typeof<string>,
-                                                    GetterCode = fun _ -> <@@ "Say What" @@>)
-
-                i.AddMember nameProp
-                i
-            let local = createLocalInterface
-            containerTy.AddMember local
-            containerTy.AddInterfaceImplementation local
-
         parentTy.AddMember prop
         parentTy.AddMember containerTy
 
@@ -248,55 +222,21 @@ open Provider
 type ProtoTypeProvider(config: TypeProviderConfig) as this = 
     inherit TypeProviderForNamespaces()
     
-    let createInterface =
-        let i = ProvidedTypeDefinition(Provider.assembly, Provider.namespace', "IZimbo", None)
-        i.SetAttributes (TypeAttributes.Public ||| TypeAttributes.Interface ||| TypeAttributes.Abstract)
-        i
-
-
-
-    let createLocalInterface =
-        let i = ProvidedTypeDefinition("IZimbo", None)
-        i.SetAttributes (TypeAttributes.Public ||| TypeAttributes.Interface ||| TypeAttributes.Abstract)
-        
-        let nuName = ProvidedMethod("Nameo", [], typeof<string>)
-        nuName.SetMethodAttrs  (MethodAttributes.Abstract ||| MethodAttributes.Virtual)
-        let nameProp = ProvidedProperty(propertyName = "Nameo", 
-                                         propertyType = typeof<string>,
-                                         GetterCode = fun _ -> <@@ "And bingo was his..." @@>)
-        i.AddMember nameProp
-        i
-
-    let testInterfaceImplementer = 
-        let roo = ProvidedTypeDefinition(Provider.assembly, Provider.namespace', "InterfaceImpl", Some typeof<MarkdownTesting>)
-        roo.AddMember(ProvidedConstructor([], InvokeCode =  fun _ -> <@@ new MarkdownTesting() @@>))
-        let local = createLocalInterface
-        roo.AddMember local
-        roo.AddInterfaceImplementation local
-        roo
 
     let inheritenceTest =
         let zBase =  ProvidedTypeDefinition(Provider.assembly, Provider.namespace', "BaseClass", Some typeof<MarkdownTesting>)
         zBase.AddMember(ProvidedConstructor([], InvokeCode =  fun _ -> <@@ new MarkdownTesting() @@>))
-        let nameProp = ProvidedProperty(propertyName = "Nameo", 
-                                         propertyType = typeof<string>,
-                                         GetterCode = fun _ -> <@@ "And bingo was his..." @@>)
+        let nameProp = ProvidedProperty(propertyName = "Nameo", propertyType = typeof<string>,GetterCode = fun _ -> <@@ "And bingo was his..." @@>)
         zBase.AddMember nameProp
         
         let zChild = ProvidedTypeDefinition(Provider.assembly, Provider.namespace', "ChildClass", Some (zBase :> Type))
         zChild.AddMember(ProvidedConstructor([], InvokeCode =  fun _ -> <@@ new MarkdownTesting() @@>))
 
-        let extraProp = ProvidedProperty(propertyName = "Extra", 
-                                    propertyType = typeof<string>,
-                                    GetterCode = fun _ -> <@@ "This is another value" @@>)
+        let extraProp = ProvidedProperty(propertyName = "Extra", propertyType = typeof<string>,GetterCode = fun _ -> <@@ "This is another value" @@>)
         zChild.AddMember extraProp
 
-
-        let overrideProp = ProvidedProperty(propertyName = "Nameo", 
-                                    propertyType = typeof<string>,
-                                    GetterCode = fun _ -> <@@ "OVERIDDEN" @@>)
+        let overrideProp = ProvidedProperty(propertyName = "Nameo", propertyType = typeof<string>, GetterCode = fun _ -> <@@ "OVERIDDEN" @@>)
         zChild.AddMember overrideProp
-
         
         zBase, zChild
 
@@ -327,8 +267,7 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
                 
 
                 for file in source |> markdownFiles do
-                    let docType = ProvidedTypeDefinition("DocumentContainer" + (file |> MarkdownFile.safeName), 
-                                                         Some typeof<MarkdownFile>)
+                    let docType = ProvidedTypeDefinition("DocumentContainer" + (file |> MarkdownFile.safeName), Some typeof<MarkdownFile>)
                     let docProp = ProvidedProperty(propertyName = (file |> MarkdownFile.safeName), 
                                                    propertyType = docType, 
                                                    GetterCode = fun args -> <@@ new MarkdownFile(file) @@>)
@@ -342,14 +281,11 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
 
                 //proxyType.AddInterfaceImplementation
 
-                proxyType.AddMember(ProvidedProperty(
-                                        "Documents", docCollectionType,
-                                        GetterCode = fun _ -> <@@ new obj() @@>))
+                proxyType.AddMember(ProvidedProperty("Documents", docCollectionType, GetterCode = fun _ -> <@@ new obj() @@>))
                 proxyType.AddMember docCollectionType
 
-                proxyType.AddMember(ProvidedProperty(
-                                        "Docs", typedefof<list<_>>.MakeGenericType(docListType),
-                                        GetterCode = fun (Singleton source) -> <@@ (%%source: MarkdownSource).Files @@>))
+                proxyType.AddMember(ProvidedProperty("Docs", typedefof<list<_>>.MakeGenericType(docListType),
+                                    GetterCode = fun (Singleton source) -> <@@ (%%source: MarkdownSource).Files @@>))
                 proxyType.AddMember docListType
 
                 ()
@@ -358,7 +294,7 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
         proxyRoot
     
     let lhs, rhs = inheritenceTest
-    do this.AddNamespace(Provider.namespace', [ createProxy; testInterfaceImplementer; lhs; rhs; ]) //testInterfaceImplementer; 
+    do this.AddNamespace(Provider.namespace', [ createProxy; lhs; rhs; ])
     
 
 [<assembly:TypeProviderAssembly>] 
