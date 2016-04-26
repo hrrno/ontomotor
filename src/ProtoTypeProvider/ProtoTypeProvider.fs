@@ -88,7 +88,7 @@ module Provider =
         interface end    
 
     type ITestVal = 
-        abstract member Zzz : int
+        abstract member Zzz : int with get, set
 
     type IHaveTitle = 
         abstract member Title : string
@@ -209,33 +209,33 @@ module Provide =
             // attach a generated interface for a known item to check functionality...
 
 
-//        if token.Title = "Bar" then
-//
-//            let nameProp = ProvidedProperty(propertyName = "RawRawr", 
-//                                        propertyType = typeof<string>,
-//                                        GetterCode = fun _ -> <@@ "Aroooooo" @@>)
-//            containerTy.AddMember nameProp
-//
-//            let createLocalInterface =
-//
-//
-//                let i = ProvidedTypeDefinition("IAmAnInterfaaaaace", None, IsErased = false)
-//                i.SetAttributes (TypeAttributes.Public ||| TypeAttributes.Interface ||| TypeAttributes.Abstract)
-//                printf "I AM ATTACHING a property....\r\n"
-//                let nameProp = ProvidedProperty(propertyName = "RawRawr", 
-//                                                    propertyType = typeof<string>,
-//                                                    GetterCode = fun _ -> <@@ () @@>)
-//
-//                i.AddMember nameProp
-//                i
-//            let local = createLocalInterface
-//            containerTy.AddMember local
-//            containerTy.AddInterfaceImplementation local
+        if token.Title = "Bar" then
+
+            let nameProp = ProvidedProperty(propertyName = "RawRawr", 
+                                        propertyType = typeof<string>,
+                                        GetterCode = fun _ -> <@@ "Aroooooo" @@>)
+            //containerTy.AddMember nameProp
+
+            let createLocalInterface =
+
+
+                let i = ProvidedTypeDefinition("IAmAnInterfaaaaace", None, IsErased = false)
+                i.SetAttributes (TypeAttributes.Public ||| TypeAttributes.Interface ||| TypeAttributes.Abstract)
+                printf "I AM ATTACHING a property....\r\n"
+                let nameProp = ProvidedProperty(propertyName = "RawRawr", 
+                                                    propertyType = typeof<string>,
+                                                    GetterCode = fun _ -> <@@ "Say What" @@>)
+
+                i.AddMember nameProp
+                i
+            let local = createLocalInterface
+            containerTy.AddMember local
+            containerTy.AddInterfaceImplementation local
 
         parentTy.AddMember prop
         parentTy.AddMember containerTy
-        // propOrDfault // attach a property or a dummy prop depending on the demands of the itnerface...    
 
+        // propOrDfault // attach a property or a dummy prop depending on the demands of the itnerface...    
 
 
     // TODO: the markdown source should provide a "toFile" method which uses the provided file names to call its properties
@@ -249,19 +249,41 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
     inherit TypeProviderForNamespaces()
     
     let createInterface =
-        let i = ProvidedTypeDefinition(Provider.assembly, Provider.namespace', "IZimbo", None, IsErased = false)
+        let i = ProvidedTypeDefinition(Provider.assembly, Provider.namespace', "IZimbo", None)
         i.SetAttributes (TypeAttributes.Public ||| TypeAttributes.Interface ||| TypeAttributes.Abstract)
         i
+
+
 
     let createLocalInterface =
         let i = ProvidedTypeDefinition("IZimbo", None)
         i.SetAttributes (TypeAttributes.Public ||| TypeAttributes.Interface ||| TypeAttributes.Abstract)
+        
+        let nuName = ProvidedMethod("Nameo", [], typeof<string>)
+        nuName.SetMethodAttrs  (MethodAttributes.Abstract ||| MethodAttributes.Virtual)
 
-        let nameProp = ProvidedProperty(propertyName = "Name", 
+        //nuName.AddMethodAttrs
+        
+        let nameProp = ProvidedProperty(propertyName = "Nameo", 
                                          propertyType = typeof<string>,
-                                         GetterCode = fun _ -> <@@ () @@>)
+                                         //MethodAttributes = (MethodAttributes.Abstract ||| MethodAttributes.Virtual),
+                                         GetterCode = fun _ -> <@@ "And bingo was his..." @@>)
+        //nameProp.GetterCode <- fun _ -> <@@ "" @@>
+        //nameProp.MethodAttributes <-  
+        
+        //nameProp.GetterCode <- nuName
+//        PropertyBuilder propertyBuilder = tb.DefineProperty(propertyName, PropertyAttributes.HasDefault, propertyType, null);
+//        MethodBuilder methodBuilder = tb.DefineMethod("get_" + propertyName, MethodAttributes.Virtual | MethodAttributes.Abstract | MethodAttributes.Public);
+//        propertyBuilder.SetGetMethod(methodBuilder);
+        //(nameProp :> PropertyInfo)
 
+        //(nameProp :> System.Reflection.PropertyInfo).att
+        //(nameProp :> System.Reflection.PropertyInfo).PropertyType <- PropertyAttributes
+//        (nameField :> System.Reflection.FieldInfo).Attributes <- null
+//        nameField.SetFieldAttributes = FieldAttributes.
         i.AddMember nameProp
+//        i.AddMember nuName
+//        i.AddMember nameField
         i
 
     let testInterfaceImplementer = 
@@ -328,7 +350,7 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
         )
         proxyRoot
     
-    do this.AddNamespace(Provider.namespace', [ createProxy; ]) //testInterfaceImplementer; 
+    do this.AddNamespace(Provider.namespace', [ createProxy; testInterfaceImplementer; ]) //testInterfaceImplementer; 
     
 
 [<assembly:TypeProviderAssembly>] 

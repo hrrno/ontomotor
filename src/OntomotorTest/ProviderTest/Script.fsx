@@ -63,6 +63,44 @@ let foo = new Proto.TypeProvider.MarkdownProvider<"""C:\proj\ontomotor\src\data\
 //roo.RawRawr
 //roo.GetType().GetInterfaces()
 
+let ff = new Proto.TypeProvider.InterfaceImpl()
+            //with member x.Foo = "hey"
+
+
+//type IImpl = Proto.TypeProvider.InterfaceImpl.IZimbo
+//
+//let f (unf:IImpl) = unf.Name
+type Alia = Proto.TypeProvider.InterfaceImpl.IZimbo
+type IRawDog =
+    abstract member Name : string                //   -- look into how "duck typing" works for interfaces?  Maybe a constraint?
+
+
+let inline add arg1 arg2 = ( ^a : (static member Name : ^a * ^b -> ^a) (arg1, arg2))
+
+//let showName fo = ( ^a : (member Name : ^a -> string))
+type Aliaaaa =
+    abstract member Name : string
+type Coog () =
+    member x.Nameo = "nameoooeoo"
+    interface Alia with
+        member x.Nameo = x.Nameo
+
+type Doog () =
+    member x.Name = "herroooo"
+    interface IRawDog with
+        member x.Name = "herro"
+let d = new Doog ()
+
+let showName fo = (^a : (member Name : string) fo)
+let showName fofo = (^a : (member Nameo : string) fofo)
+
+
+let rrr = showName d
+
+let f = ff :> Alia
+let f = ff :> RawDog
+
+
 let x = foo.Documents.content_autoprops.Root.Foo.Bar
 let o = foo.Documents.content_autoprops.Root.Foo.Bar.Baz
 let d = foo.Documents.content_autoprops.Root.Foo.GetType().GetInterfaces()
