@@ -261,29 +261,10 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
         
         let nuName = ProvidedMethod("Nameo", [], typeof<string>)
         nuName.SetMethodAttrs  (MethodAttributes.Abstract ||| MethodAttributes.Virtual)
-
-        //nuName.AddMethodAttrs
-        
         let nameProp = ProvidedProperty(propertyName = "Nameo", 
                                          propertyType = typeof<string>,
-                                         //MethodAttributes = (MethodAttributes.Abstract ||| MethodAttributes.Virtual),
                                          GetterCode = fun _ -> <@@ "And bingo was his..." @@>)
-        //nameProp.GetterCode <- fun _ -> <@@ "" @@>
-        //nameProp.MethodAttributes <-  
-        
-        //nameProp.GetterCode <- nuName
-//        PropertyBuilder propertyBuilder = tb.DefineProperty(propertyName, PropertyAttributes.HasDefault, propertyType, null);
-//        MethodBuilder methodBuilder = tb.DefineMethod("get_" + propertyName, MethodAttributes.Virtual | MethodAttributes.Abstract | MethodAttributes.Public);
-//        propertyBuilder.SetGetMethod(methodBuilder);
-        //(nameProp :> PropertyInfo)
-
-        //(nameProp :> System.Reflection.PropertyInfo).att
-        //(nameProp :> System.Reflection.PropertyInfo).PropertyType <- PropertyAttributes
-//        (nameField :> System.Reflection.FieldInfo).Attributes <- null
-//        nameField.SetFieldAttributes = FieldAttributes.
         i.AddMember nameProp
-//        i.AddMember nuName
-//        i.AddMember nameField
         i
 
     let testInterfaceImplementer = 
@@ -293,6 +274,32 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
         roo.AddMember local
         roo.AddInterfaceImplementation local
         roo
+
+    let inheritenceTest =
+        let zBase =  ProvidedTypeDefinition(Provider.assembly, Provider.namespace', "BaseClass", Some typeof<MarkdownTesting>)
+        zBase.AddMember(ProvidedConstructor([], InvokeCode =  fun _ -> <@@ new MarkdownTesting() @@>))
+        let nameProp = ProvidedProperty(propertyName = "Nameo", 
+                                         propertyType = typeof<string>,
+                                         GetterCode = fun _ -> <@@ "And bingo was his..." @@>)
+        zBase.AddMember nameProp
+        
+        let zChild = ProvidedTypeDefinition(Provider.assembly, Provider.namespace', "ChildClass", Some (zBase :> Type))
+        zChild.AddMember(ProvidedConstructor([], InvokeCode =  fun _ -> <@@ new MarkdownTesting() @@>))
+
+        let extraProp = ProvidedProperty(propertyName = "Extra", 
+                                    propertyType = typeof<string>,
+                                    GetterCode = fun _ -> <@@ "This is another value" @@>)
+        zChild.AddMember extraProp
+
+
+        let overrideProp = ProvidedProperty(propertyName = "Nameo", 
+                                    propertyType = typeof<string>,
+                                    GetterCode = fun _ -> <@@ "OVERIDDEN" @@>)
+        zChild.AddMember overrideProp
+
+        
+        zBase, zChild
+
         
     let createProxy =
         let proxyRoot = Provide.proxyType Provider.proxyName
@@ -350,7 +357,8 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
         )
         proxyRoot
     
-    do this.AddNamespace(Provider.namespace', [ createProxy; testInterfaceImplementer; ]) //testInterfaceImplementer; 
+    let lhs, rhs = inheritenceTest
+    do this.AddNamespace(Provider.namespace', [ createProxy; testInterfaceImplementer; lhs; rhs; ]) //testInterfaceImplementer; 
     
 
 [<assembly:TypeProviderAssembly>] 

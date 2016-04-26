@@ -63,6 +63,13 @@ let foo = new Proto.TypeProvider.MarkdownProvider<"""C:\proj\ontomotor\src\data\
 //roo.RawRawr
 //roo.GetType().GetInterfaces()
 
+let bawr = new Proto.TypeProvider.BaseClass()
+bawr.Nameo
+
+let rawr = new Proto.TypeProvider.ChildClass()
+bawr.Nameo, rawr.Nameo
+
+
 let ff = new Proto.TypeProvider.InterfaceImpl()
             //with member x.Foo = "hey"
 
