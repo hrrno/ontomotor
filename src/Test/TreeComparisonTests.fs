@@ -166,6 +166,12 @@ type TokenInterfaceTree = | InterfaceTree of Token * IItem * TokenInterfaceTree 
 
 module Interface =
 
+    let rec private printNode depth (t:ITree) =
+        printfn "%s%s" depth (t.Item.Name.Replace("\r\n", "\r\n" + depth))
+        for s in t.Sub do printNode (depth + "----") s
+
+    let print (t:ITree) = printNode "" t
+
     let rec decoratedTree (Node(token, subTokens):TokenTree) : TokenInterfaceTree =
         match token with 
             | Header (i,c) | Root (i,c) -> 
@@ -214,9 +220,9 @@ let interfaces (tree:TokenTree) =
     // pulls out a merged interface
     // maps the tokens to an iface tree
     // maps the iface tree to the merged tree
-
     // maps the tokens to the merged tree
-    // replaces the merged tree with real types
+
+    // replace the merged tree with real types
         
     // register base types
         
@@ -230,9 +236,6 @@ let interfaces (tree:TokenTree) =
 
         
     let typeTree = mergedInterfaces |> baseclassTypeTree
-
-        
-    let colors = dict["blue", 40; "red", 700]
 
     (tree, tree |> Interface.mergedTree)
 
@@ -248,19 +251,11 @@ let t3d = t3 |> decoratedTree
 let t4d = t4 |> decoratedTree
 let t5d = t5 |> decoratedTree
 
-let t5i = t5 |> tree
+let t5i = t5 |> Interface.tree
 
-module Interface =
-
-    let rec private printNode depth (t:ITree) =
-        printfn "%s%s" depth (t.Item.Name.Replace("\r\n", "\r\n" + depth))
-        for s in t.Sub do printNode (depth + "----") s
-
-    let print (t:ITree) = printNode "" t
 
 
 t5i |> Interface.print
 t5t |> Interface.print
-let rawr = mergedParentInterface t5i t5t
-//interface tree has token to IFace names
-    // make a map of IFace to Merged IFace and then apply
+let rawr = Interface.mergedParentInterface t5i t5t
+
