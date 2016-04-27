@@ -165,94 +165,25 @@ let makeProp (foo:ITree) =
 
 //type TokenInterfaceTree = | InterfaceTree of Token * IItem * TokenInterfaceTree list
 
-module Interface =
-
-    let rec private printNode depth (t:ITree) =
-        printfn "%s%s" depth (t.Item.Name.Replace("\r\n", "\r\n" + depth))
-        for s in t.Sub do printNode (depth + "----") s
-
-    let print (t:ITree) = printNode "" t
-
-//    let rec decoratedTree (Node(token, subTokens):TokenTree) : TokenInterfaceTree =
-//        match token with 
-//            | Header (i,c) | Root (i,c) -> 
-//                let item = { Name  = "I" + token.Title; }
-//                let sub  = [ for s in subTokens do yield decoratedTree s ]
-//                InterfaceTree(token, item, sub)
-//            | Property (i,c) | Yaml (i,c) -> 
-//                InterfaceTree(token, { Name = token.Title }, [])
-
-    let rec tree (Node(token, subTokens):TokenTree) : ITree =
-        match token with 
-            | Header (i,c) | Root (i,c) -> 
-                let item = { Name  = "I" + token.Title; }
-                let sub  = [ for s in subTokens do yield tree s ]
-                IFace(item, sub)
-            | Property (i,c) | Yaml (i,c) -> 
-                IProp({ Name = token.Title })
-
-    let rec isContainedBy (merged:ITree) (face:ITree) =   
-        let propsAreContained = 
-            face.Props
-            |> List.fold (fun acc prop -> acc && merged.Props |> List.contains prop) true
-
-        let facesAreContained =
-            face.Faces
-            |> List.fold (fun acc face -> acc && merged.Faces |> List.exists (fun mface -> face |> isContainedBy mface) ) true       
-            
-        propsAreContained && facesAreContained
-
-    let mergedParentInterface (face:ITree) (merged:ITree) : Dictionary<IItem,ITree> =
-        let map = new Dictionary<IItem,ITree>()
-        let rec mapTrees (face:ITree) (merged:ITree) =
-            for i in face.Faces do
-                for m in merged.Faces do
-                    if i |> isContainedBy m then
-                        map.Add (i.Item, m)
-                        mapTrees i m
-                    else
-                        printf "No match found for '%s'\r\n" i.Item.Name
-        mapTrees face merged 
-        map
+module Interfaced =
 
 
-let typeMap (tree:ITree) : Dictionary<ITree,Type> =
-    let map = new Dictionary<ITree, Type>()
-    let mutable counter = 0
-    let rec generate (tree:ITree) =
-        counter <- counter + 1
-        let newType = ProvidedTypeDefinition(tree.Item.Name + "Base" + counter.ToString(), Some typeof<MarkdownElement>)
-        for f in tree.Faces do 
-                newType.AddMember (f |> generate)
-        for p in tree.Props do
-            newType.AddMember (p |> makeProp)
-        map.Add (tree, newType)
-        newType
-    tree |> generate |> ignore
-    map
+    let registerBaseTypes (types:IEnumerable<Type>) =
+        // this.Namespace.AddMembers types
 
+        ()
 
-let itemMap (interfaceMap:Dictionary<IItem,ITree>) (typeMap:Dictionary<ITree,Type>) : Dictionary<IItem, Type> = 
-    let map = new Dictionary<IItem, Type>()
-    for KeyValue(k,v) in interfaceMap do
-        map.Add (k, typeMap.Item (v))
-    map
-
-let registerBaseTypes (types:IEnumerable<Type>) =
-    // this.Namespace.AddMembers types
-    ()
-
+    let interfaces (tokens:TokenTree) = 
     
-let interfaces (tree:TokenTree) = 
-    let interfaces = tree |> Interface.tree
-    let mergedInterfaces = tree |> Interface.mergedTree
-    let interfaceMap = Interface.mergedParentInterface interfaces mergedInterfaces
-    let typeMap = typeMap mergedInterfaces
-    let itemMap = itemMap interfaceMap typeMap
+        let interfaces = tokens |> Interface.tree
+        let merged = tokens |> mergedTree
+        let interfaceMap = mergedParentInterface interfaces merged
+        let typeMap = typeMap merged
+        let itemMap = itemMap interfaceMap typeMap
 
-    registerBaseTypes typeMap.Values
+        registerBaseTypes typeMap.Values
 
-    tree, itemMap
+        tokens, itemMap
 
 let t1t = t1 |> Interface.mergedTree
 let t2t = t2 |> Interface.mergedTree

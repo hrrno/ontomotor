@@ -4,6 +4,9 @@ module MarkdownStructure
 
 // TODO: figure out how to handle conflicting data types ie IOne.Prop : int vs ITwo.Prop : string [(an exception?)]
 
+open System
+open System.Collections.Generic
+
 
 module Interface =         
     
@@ -19,13 +22,6 @@ module Interface =
              member x.Props = x.Sub |> List.filter (function | IProp _ -> true | _ -> false)
              member x.Faces = x.Sub |> List.filter (function | IFace _ -> true | _ -> false)
 
-    let rec print (tree:ITree) =
-        printfn "interface: %s = %s" tree.Item.Name tree.Item.Name
-        match tree with
-        | IProp _ -> ()
-        | IFace (item, sub) -> for s in sub do print s
-
-
     let rec decoratedTree (Node(token, subTokens):TokenTree) : Token * ITree =
         match token with 
             | Header (i,c) | Root (i,c) -> 
@@ -35,6 +31,53 @@ module Interface =
             | Property (i,c) | Yaml (i,c) -> 
                 token, IProp({ Name = token.Title })
                 
+
+    let rec private printNode depth (t:ITree) =
+        printfn "%s%s" depth (t.Item.Name.Replace("\r\n", "\r\n" + depth))
+        for s in t.Sub do printNode (depth + "----") s
+
+    let print (t:ITree) = printNode "" t
+    
+    let rec tree (Node(token, subTokens):TokenTree) : ITree =
+        match token with 
+            | Header (i,c) | Root (i,c) -> 
+                let item = { Name  = "I" + token.Title; }
+                let sub  = [ for s in subTokens do yield tree s ]
+                IFace(item, sub)
+            | Property (i,c) | Yaml (i,c) -> 
+                IProp({ Name = token.Title })
+
+    let rec isContainedBy (merged:ITree) (face:ITree) =   
+        let propsAreContained = 
+            face.Props
+            |> List.fold (fun acc prop -> acc && merged.Props |> List.contains prop) true
+
+        let facesAreContained =
+            face.Faces
+            |> List.fold (fun acc face -> acc && merged.Faces |> List.exists (fun mface -> face |> isContainedBy mface) ) true       
+            
+        propsAreContained && facesAreContained
+
+    let mergedParentInterface (face:ITree) (merged:ITree) : Dictionary<IItem,ITree> =
+        let map = new Dictionary<IItem,ITree>()
+        let rec mapTrees (face:ITree) (merged:ITree) =
+            for i in face.Faces do
+                for m in merged.Faces do
+                    if i |> isContainedBy m then
+                        map.Add (i.Item, m)
+                        mapTrees i m
+                    else
+                        printf "No match found for '%s'\r\n" i.Item.Name
+        mapTrees face merged 
+        map
+
+
+
+    let itemMap (interfaceMap:Dictionary<IItem,ITree>) (typeMap:Dictionary<ITree,Type>) : Dictionary<IItem, Type> = 
+        let map = new Dictionary<IItem, Type>()
+        for KeyValue(k,v) in interfaceMap do
+            map.Add (k, typeMap.Item (v))
+        map
 
     [<AutoOpen>]
     module private Merging =

@@ -156,6 +156,20 @@ module Provide =
 
 
 
+    let typeMap (tree:ITree) : Dictionary<ITree,Type> =
+        let map = new Dictionary<ITree, Type>()
+        let mutable counter = 0
+        let rec generate (tree:ITree) =
+            counter <- counter + 1
+            let newType = ProvidedTypeDefinition(tree.Item.Name + "Base" + counter.ToString(), Some typeof<MarkdownElement>)
+            for f in tree.Faces do 
+                    newType.AddMember (f |> generate)
+            for p in tree.Props do
+                newType.AddMember (p |> makeProp)
+            map.Add (tree, newType)
+            newType
+        tree |> generate |> ignore
+        map
 
     let rec baseclassTypeTree (tree:ITree) =
         let faces, props = tree.Faces, tree.Props
