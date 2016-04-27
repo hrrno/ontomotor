@@ -207,9 +207,11 @@ module Provide =
         let interfaces = tree |> Interface.decoratedTree
         //let tokensAndInterfaces = tree,
 
-        let colors = dict["blue", 40; "red", 700]
         
-        //let typeTree = interfaces |> baseclassTypeTree
+        let typeTree = mergedInterfaces |> baseclassTypeTree
+
+        
+        let colors = dict["blue", 40; "red", 700]
 
         (tree, tree |> Interface.mergedTree)
         

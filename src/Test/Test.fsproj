@@ -79,6 +79,11 @@
       <Project>{8158283f-815d-4ae6-9d4e-bbc4809dc6db}</Project>
       <Private>True</Private>
     </ProjectReference>
+    <ProjectReference Include="..\ProtoTypeProvider\ProtoTypeProvider.fsproj">
+      <Name>ProtoTypeProvider</Name>
+      <Project>{23afe2ac-9347-49ac-ac77-ea19f3962892}</Project>
+      <Private>True</Private>
+    </ProjectReference>
   </ItemGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

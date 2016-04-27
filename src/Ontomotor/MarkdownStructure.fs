@@ -105,5 +105,7 @@ module Interface =
                    subTokens
                    |> List.fold mergeAll accumulatorSeed  
                    |> toList
+    
+        let mergedInterface tokens = IFace({ Name = "IShared" }, mergedTree tokens )
 
-    let mergedTree (tokens:TokenTree) = tokens |> mergedTree |> List.head
+    let mergedTree (tokens:TokenTree) = tokens |> mergedInterface //|> List.head
