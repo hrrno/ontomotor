@@ -163,28 +163,6 @@ let makeProp (foo:ITree) =
 
 
 
-//type TokenInterfaceTree = | InterfaceTree of Token * IItem * TokenInterfaceTree list
-
-module Interfaced =
-
-
-    let registerBaseTypes (types:IEnumerable<Type>) =
-        // this.Namespace.AddMembers types
-
-        ()
-
-    let interfaces (tokens:TokenTree) = 
-    
-        let interfaces = tokens |> Interface.tree
-        let merged = tokens |> mergedTree
-        let interfaceMap = mergedParentInterface interfaces merged
-        let typeMap = typeMap merged
-        let itemMap = itemMap interfaceMap typeMap
-
-        registerBaseTypes typeMap.Values
-
-        tokens, itemMap
-
 let t1t = t1 |> Interface.mergedTree
 let t2t = t2 |> Interface.mergedTree
 let t3t = t3 |> Interface.mergedTree

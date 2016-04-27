@@ -6,6 +6,7 @@ module MarkdownStructure
 
 open System
 open System.Collections.Generic
+open ProviderImplementation.ProvidedTypes
 
 
 module Interface =         
@@ -50,7 +51,7 @@ module Interface =
     let rec isContainedBy (merged:ITree) (face:ITree) =   
         let propsAreContained = 
             face.Props
-            |> List.fold (fun acc prop -> acc && merged.Props |> List.contains prop) true
+            |> List.fold (fun acc prop -> acc && merged.Props |> List.exists ((=) prop)) true
 
         let facesAreContained =
             face.Faces
@@ -78,6 +79,11 @@ module Interface =
         for KeyValue(k,v) in interfaceMap do
             map.Add (k, typeMap.Item (v))
         map
+
+
+
+
+
 
     [<AutoOpen>]
     module private Merging =

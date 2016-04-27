@@ -156,6 +156,18 @@ module Provide =
 
 
 
+    let rec baseclassTypeTree (tree:ITree) =
+        let faces, props = tree.Faces, tree.Props
+        let newType = ProvidedTypeDefinition(tree.Item.Name + "Base", Some typeof<MarkdownElement>)
+        for f in faces do 
+                newType.AddMember (f |> baseclassTypeTree)
+
+        for p in props do
+            newType.AddMember (p |> makeProp)
+        newType
+        //(tree, newType)
+
+
     let typeMap (tree:ITree) : Dictionary<ITree,Type> =
         let map = new Dictionary<ITree, Type>()
         let mutable counter = 0
@@ -171,77 +183,47 @@ module Provide =
         tree |> generate |> ignore
         map
 
-    let rec baseclassTypeTree (tree:ITree) =
-        let faces, props = tree.Faces, tree.Props
-        let newType = ProvidedTypeDefinition(tree.Item.Name + "Base", Some typeof<MarkdownElement>)
-        for f in faces do 
-                newType.AddMember (f |> baseclassTypeTree)
-
-        for p in props do
-            newType.AddMember (p |> makeProp)
-        newType
-        //(tree, newType)
 
 
-//    let ripOutFaces (tree:ITree) =
-//        let rawr = 
-//            seq {
-//                let rec ooooo = yield! "oi"
-//                "0"
-//                //for i in 1 .. 10 do ooooo
-//            }
-//        let faces = 
-//            [ 
-//                
-//                for t in tree.Sub do yield "hey" 
-//            ]
-//        let rec recurse = "ok"
-//        "2"
+    let registerBaseTypes (types:IEnumerable<Type>) =
 
-    let ifaceTree (full:ITree) (merged:ITree) : IDictionary<ITree,ITree> = 
-        // 
-        dict []
+        ////////////////////////
 
-    let interfaces (tree:TokenTree) = 
+           Think I need to bring back the Token * IItem * Subs data structure, as its use case is in the property mapping
 
-        // takes a tree of tokens
-        // pulls out a merged interface
-        // maps the tokens to an iface tree
+//        1) make provided containers inherit from their mapped types.. Some typeof<MarkdownElement> => typeMap.Item(token.Item)
+//        2) register the types (right here in this function)
+//        3) test
+//        4) refactor
 
-        // maps the iface tree to the merged tree
-        // maps the tokens to the merged tree
-        // replaces the merged tree with real types
-        
-        // register base types
-        
-        // returns the merged type tree and the type map
-        // return a TokenTree * Type tree
+        // this.Namespace.AddMembers types
+        ////////////////////////
+        ()
 
-        let mergedInterfaces = tree |> Interface.mergedTree
-        let interfaces = tree |> Interface.decoratedTree
-        //let tokensAndInterfaces = tree,
+    let interfaces (tokens:TokenTree) = 
+    
+        let interfaces = tokens |> tree
+        let merged = tokens |> mergedTree
+        let interfaceMap = mergedParentInterface interfaces merged
+        let typeMap = typeMap merged
+        let itemMap = itemMap interfaceMap typeMap
 
-        
-        let typeTree = mergedInterfaces |> baseclassTypeTree
+        registerBaseTypes typeMap.Values
 
-        
-        let colors = dict["blue", 40; "red", 700]
-
-        (tree, tree |> Interface.mergedTree)
+        tokens, itemMap
         
         
 
-    let rec properties parentTy ((Node(token, subtree):TokenTree), interfaces:ITree) =
+    let rec properties parentTy ((Node(token, subtree):TokenTree), typeMap:Dictionary<IItem,Type>) =
+        let baseType = typeMap.Item(token)
         let containerTy = ProvidedTypeDefinition(token.Title + "Container", Some typeof<MarkdownElement>)
         let prop = token |> propFor containerTy 
         
         for node in subtree do 
-            (node, interfaces) |> properties containerTy 
+            (node, typeMap) |> properties containerTy 
         parentTy.AddMember prop
         parentTy.AddMember containerTy
-
-        // propOrDfault // attach a property or a dummy prop depending on the demands of the itnerface...    
-
+        
 
     // TODO: the markdown source should provide a "toFile" method which uses the provided file names to call its properties
 
