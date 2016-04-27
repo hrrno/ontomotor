@@ -164,31 +164,57 @@ let rec baseclassTypeTree (tree:ITree) =
 
 type TokenInterfaceTree = | InterfaceTree of Token * IItem * TokenInterfaceTree list
 
-let rec decoratedTree (Node(token, subTokens):TokenTree) : TokenInterfaceTree =
-    match token with 
-        | Header (i,c) | Root (i,c) -> 
-            let item = { Name  = "I" + token.Title; }
-            let sub  = [ for s in subTokens do yield decoratedTree s ]
-            InterfaceTree(token, item, sub)
-        | Property (i,c) | Yaml (i,c) -> 
-            InterfaceTree(token, { Name = token.Title }, [])
+module Interface =
 
-let rec tree (Node(token, subTokens):TokenTree) : ITree =
-    match token with 
-        | Header (i,c) | Root (i,c) -> 
-            let item = { Name  = "I" + token.Title; }
-            let sub  = [ for s in subTokens do yield tree s ]
-            IFace(item, sub)
-        | Property (i,c) | Yaml (i,c) -> 
-            IProp({ Name = token.Title })
+    let rec decoratedTree (Node(token, subTokens):TokenTree) : TokenInterfaceTree =
+        match token with 
+            | Header (i,c) | Root (i,c) -> 
+                let item = { Name  = "I" + token.Title; }
+                let sub  = [ for s in subTokens do yield decoratedTree s ]
+                InterfaceTree(token, item, sub)
+            | Property (i,c) | Yaml (i,c) -> 
+                InterfaceTree(token, { Name = token.Title }, [])
+
+    let rec tree (Node(token, subTokens):TokenTree) : ITree =
+        match token with 
+            | Header (i,c) | Root (i,c) -> 
+                let item = { Name  = "I" + token.Title; }
+                let sub  = [ for s in subTokens do yield tree s ]
+                IFace(item, sub)
+            | Property (i,c) | Yaml (i,c) -> 
+                IProp({ Name = token.Title })
+
+    let rec isContainedBy (merged:ITree) (face:ITree) =   
+        let propsAreContained = 
+            face.Props
+            |> List.fold (fun acc prop -> acc && merged.Props |> List.contains prop) true
+
+        let facesAreContained =
+            face.Faces
+            |> List.fold (fun acc face -> acc && merged.Faces |> List.exists (fun mface -> face |> isContainedBy mface) ) true       
             
+        propsAreContained && facesAreContained
+
+    let mergedParentInterface (face:ITree) (merged:ITree) : Dictionary<IItem,ITree> =
+        let map = new Dictionary<IItem,ITree>()
+        let rec mapTrees (face:ITree) (merged:ITree) =
+            for i in face.Faces do
+                for m in merged.Faces do
+                    if i |> isContainedBy m then
+                        map.Add (i.Item, m)
+                        mapTrees i m
+                    else
+                        printf "No match found for '%s'\r\n" i.Item.Name
+        mapTrees face merged 
+        map
+    
 let interfaces (tree:TokenTree) = 
 
     // takes a tree of tokens
     // pulls out a merged interface
     // maps the tokens to an iface tree
-
     // maps the iface tree to the merged tree
+
     // maps the tokens to the merged tree
     // replaces the merged tree with real types
         
@@ -198,8 +224,9 @@ let interfaces (tree:TokenTree) =
     // return a TokenTree * Type tree
 
     let mergedInterfaces = tree |> Interface.mergedTree
-    let interfaces = tree |> Interface.decoratedTree
-    //let tokensAndInterfaces = tree,
+    let decorated = tree |> Interface.decoratedTree
+    let interfaces = tree |> Interface.tree
+    let interfaceMap = Interface.mergedParentInterface interfaces mergedInterfaces
 
         
     let typeTree = mergedInterfaces |> baseclassTypeTree
@@ -232,67 +259,6 @@ module Interface =
     let print (t:ITree) = printNode "" t
 
 
-let propName tree = match tree with | IProp i -> i.Name | _ -> ""
-
-let rec childrenId (face:ITree) = 
-    let propNames =
-        face.Props 
-        |> List.sort
-        |> List.fold (fun acc sub -> acc + "->" + (sub |> propName)) ""
-    let childrenNames =
-        face.Faces
-        |> List.sort
-        |> List.fold (fun acc face -> acc + (face |> childrenId)) ""
-    propNames + childrenNames
-
-let mergedParentInterface (face:ITree) (merged:ITree) : Dictionary<IItem,ITree> =
-    let map = new Dictionary<IItem,ITree>()
-
-    let rec isContainedBy (merged:ITree) (face:ITree) =
-        
-        let propsAreContained = 
-            face.Props
-            |> List.fold (fun acc prop -> acc && merged.Props |> List.contains prop) true
-
-        let facesAreContained =
-            face.Faces
-            |> List.fold (fun acc face -> acc && merged.Faces |> List.exists (fun mface -> face |> isContainedBy mface) ) true           
-
-        propsAreContained && facesAreContained
-
-//        merged.Props 
-//        |> List.con
-//        // have to replace this with something that actually checks the props, string matching is flawed with merged interfaces...
-//
-//        let mergedI = (merged |> childrenId)
-//        let faceI = (face |> childrenId)
-//        printf "Merging: \r\nM: %s \r\n I: %s\r\n" mergedI faceI
-//        printf "IsMatch: %b\r\n" ((merged |> childrenId).Contains(face |> childrenId))
-//        (merged |> childrenId).Contains(face |> childrenId)
-
-    let rec recurse (face:ITree) (merged:ITree) =
-        // top down for the sake of simplicity
-        for i in face.Faces do
-            printf "Looking to merge: %s\r\n" i.Item.Name
-            for m in merged.Faces do
-                printf "Merging for '%s'...\r\n" i.Item.Name
-
-                if i |> isContainedBy m then
-                    map.Add (i.Item, m)
-                    recurse i m
-                else
-                    printf "No match found for '%s'\r\n" i.Item.Name
-                //else
-                    
-
-    recurse face merged
-        // find match
-        // match children        
-
-    map
-
-t5i |> childrenId
-t5t |> childrenId
 t5i |> Interface.print
 t5t |> Interface.print
 let rawr = mergedParentInterface t5i t5t
