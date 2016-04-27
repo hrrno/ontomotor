@@ -162,6 +162,7 @@ let rec baseclassTypeTree (tree:ITree) =
     newType
 
 
+
 type TokenInterfaceTree = | InterfaceTree of Token * IItem * TokenInterfaceTree list
 
 module Interface =
@@ -213,6 +214,21 @@ module Interface =
                         printf "No match found for '%s'\r\n" i.Item.Name
         mapTrees face merged 
         map
+
+
+let typeMap (tree:ITree) : Dictionary<ITree,Type> =
+    let map = new Dictionary<ITree, Type>()
+    let rec generate (tree:ITree) =
+        let newType = ProvidedTypeDefinition(tree.Item.Name + "Base", Some typeof<MarkdownElement>)
+//        for f in tree.Faces do 
+//                newType.AddMember (f |> generate)
+//        for p in tree.Props do
+//            newType.AddMember (p |> makeProp)
+        map.Add (tree, newType)
+        newType
+    tree |> generate |> ignore
+    map
+    
     
 let interfaces (tree:TokenTree) = 
 
@@ -229,11 +245,11 @@ let interfaces (tree:TokenTree) =
     // returns the merged type tree and the type map
     // return a TokenTree * Type tree
 
-    let mergedInterfaces = tree |> Interface.mergedTree
     let decorated = tree |> Interface.decoratedTree
+    let mergedInterfaces = tree |> Interface.mergedTree
     let interfaces = tree |> Interface.tree
     let interfaceMap = Interface.mergedParentInterface interfaces mergedInterfaces
-
+    let typeMap = typeMap mergedInterfaces
         
     let typeTree = mergedInterfaces |> baseclassTypeTree
 
@@ -259,3 +275,4 @@ t5i |> Interface.print
 t5t |> Interface.print
 let rawr = Interface.mergedParentInterface t5i t5t
 
+t4t |> typeMap
