@@ -5,6 +5,7 @@ open System.IO
 open System.Globalization
 open System.Text.RegularExpressions
 open System.Reflection
+open System.Collections.Generic
 open ProviderImplementation.ProvidedTypes
 open Microsoft.FSharp.Core.CompilerServices
 open MarkdownParser
@@ -152,6 +153,10 @@ module Provide =
                          propertyType = typeof<string>, 
                          GetterCode = fun args -> <@@ "[emptyprop]" @@>)
 
+
+
+
+
     let rec baseclassTypeTree (tree:ITree) =
         let faces, props = tree.Faces, tree.Props
         let newType = ProvidedTypeDefinition(tree.Item.Name + "Base", Some typeof<MarkdownElement>)
@@ -164,27 +169,31 @@ module Provide =
         //(tree, newType)
 
 
-    let ripOutFaces (tree:ITree) =
-        let rawr = 
-            seq {
-                let rec ooooo = yield! "oi"
-                "0"
-                //for i in 1 .. 10 do ooooo
-            }
-        let faces = 
-            [ 
-                
-                for t in tree.Sub do yield "hey" 
-            ]
-        let rec recurse = "ok"
-        "2"
+//    let ripOutFaces (tree:ITree) =
+//        let rawr = 
+//            seq {
+//                let rec ooooo = yield! "oi"
+//                "0"
+//                //for i in 1 .. 10 do ooooo
+//            }
+//        let faces = 
+//            [ 
+//                
+//                for t in tree.Sub do yield "hey" 
+//            ]
+//        let rec recurse = "ok"
+//        "2"
+
+    let ifaceTree (full:ITree) (merged:ITree) : IDictionary<ITree,ITree> = 
+        // 
+        dict []
 
     let interfaces (tree:TokenTree) = 
 
         // takes a tree of tokens
         // pulls out a merged interface
-
         // maps the tokens to an iface tree
+
         // maps the iface tree to the merged tree
         // maps the tokens to the merged tree
         // replaces the merged tree with real types
@@ -194,11 +203,15 @@ module Provide =
         // returns the merged type tree and the type map
         // return a TokenTree * Type tree
 
-        let interfaces = tree |> Interface.tree
+        let mergedInterfaces = tree |> Interface.mergedTree
+        let interfaces = tree |> Interface.decoratedTree
+        //let tokensAndInterfaces = tree,
 
-        let typeTree = interfaces |> baseclassTypeTree
+        let colors = dict["blue", 40; "red", 700]
+        
+        //let typeTree = interfaces |> baseclassTypeTree
 
-        (tree, tree |> Interface.tree)
+        (tree, tree |> Interface.mergedTree)
         
         
 

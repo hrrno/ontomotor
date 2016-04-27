@@ -25,6 +25,17 @@ module Interface =
         | IProp _ -> ()
         | IFace (item, sub) -> for s in sub do print s
 
+
+    let rec decoratedTree (Node(token, subTokens):TokenTree) : Token * ITree =
+        match token with 
+            | Header (i,c) | Root (i,c) -> 
+                let item = { Name  = "I" + token.Title; }
+                let sub  = [ for s in subTokens do yield (decoratedTree s |> snd) ]
+                token, IFace(item, sub)     
+            | Property (i,c) | Yaml (i,c) -> 
+                token, IProp({ Name = token.Title })
+                
+
     [<AutoOpen>]
     module private Merging =
      
@@ -95,4 +106,4 @@ module Interface =
                    |> List.fold mergeAll accumulatorSeed  
                    |> toList
 
-    let tree (tokens:TokenTree) = tokens |> mergedTree |> List.head
+    let mergedTree (tokens:TokenTree) = tokens |> mergedTree |> List.head

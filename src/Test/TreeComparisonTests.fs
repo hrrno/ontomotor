@@ -135,10 +135,38 @@ let t5 = [ Root(0, "Root")
          ] |> tokenTree
 
 
+open MarkdownStructure.Interface
+
+type TokenInterfaceTree = | InterfaceTree of Token * IItem * TokenInterfaceTree list
+
+let rec decoratedTree (Node(token, subTokens):TokenTree) : TokenInterfaceTree =
+    match token with 
+        | Header (i,c) | Root (i,c) -> 
+            let item = { Name  = "I" + token.Title; }
+            let sub  = [ for s in subTokens do yield decoratedTree s ]
+            InterfaceTree(token, item, sub)
+        | Property (i,c) | Yaml (i,c) -> 
+            InterfaceTree(token, { Name = token.Title }, [])
+
+let rec decoratedTokens (Node(token, subTokens):TokenTree) : Token * IItem =
+    match token with 
+        | Header (i,c) | Root (i,c) -> 
+            let item = { Name  = "I" + token.Title; }
+            //let sub  = [ for s in subTokens do yield (decoratedTree s |> snd) ]
+            token, item     
+        | Property (i,c) | Yaml (i,c) -> 
+            token, { Name = token.Title }
+
         
 printfn "%s" (new System.String('\n', 3))
-let t1t = t1 |> Interface.tree
-let t2t = t2 |> Interface.tree
-let t3t = t3 |> Interface.tree
-let t4t = t4 |> Interface.tree
-let t5t = t5 |> Interface.tree
+let t1t = t1 |> Interface.mergedTree
+let t2t = t2 |> Interface.mergedTree
+let t3t = t3 |> Interface.mergedTree
+let t4t = t4 |> Interface.mergedTree
+let t5t = t5 |> Interface.mergedTree
+
+let t1d = t1 |> decoratedTree
+let t2d = t2 |> decoratedTree
+let t3d = t3 |> decoratedTree
+let t4d = t4 |> decoratedTokens
+let t5d = t5 |> decoratedTokens
