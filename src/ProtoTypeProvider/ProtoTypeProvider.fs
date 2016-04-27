@@ -180,25 +180,27 @@ module Provide =
         "2"
 
     let interfaces (tree:TokenTree) = 
+
+        // takes a tree of tokens
+        // pulls out a merged interface
+
+        // maps the tokens to an iface tree
+        // maps the iface tree to the merged tree
+        // maps the tokens to the merged tree
+        // replaces the merged tree with real types
+        
+        // register base types
+        
+        // returns the merged type tree and the type map
+        // return a TokenTree * Type tree
+
         let interfaces = tree |> Interface.tree
 
         let typeTree = interfaces |> baseclassTypeTree
 
         (tree, tree |> Interface.tree)
         
-        // return a TokenTree * Type tree
-            // use the types in the prop gen function to gen props
-
-    
-        //render the ITree into actual types and then attach them to the container type
-        //containerTy.AddInterfaceImplementation typeof<generated interface...>
-
-        // Start out attaching simple props to objects
-
-        // Need to grab the current interface (and feed them to the recursive algo underneath)
-        // Need to test for interface `fitness`
-        // Need to generate the type
-        // Need to attach the type
+        
 
     let rec properties parentTy ((Node(token, subtree):TokenTree), interfaces:ITree) =
         let containerTy = ProvidedTypeDefinition(token.Title + "Container", Some typeof<MarkdownElement>)
