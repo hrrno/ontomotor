@@ -242,25 +242,10 @@ let registerBaseTypes (types:IEnumerable<Type>) =
     // this.Namespace.AddMembers types
     ()
 
-let tokensNTypes (tokens:TokenTree) (typeMap:Dictionary<IItem, Type>) = 
-    ()
     
 let interfaces (tree:TokenTree) = 
-
-    // takes a tree of tokens
-    // pulls out a merged interface
-    // maps the tokens to an iface tree
-    // maps the iface tree to the merged tree
-    // maps the tokens to the merged tree
-    // replace the merged tree with real types
-    // register base types
-        
-    // returns the merged type tree and the type map
-    // return a TokenTree * Type tree
-
-    //let decorated = tree |> Interface.decoratedTree
-    let mergedInterfaces = tree |> Interface.mergedTree
     let interfaces = tree |> Interface.tree
+    let mergedInterfaces = tree |> Interface.mergedTree
     let interfaceMap = Interface.mergedParentInterface interfaces mergedInterfaces
     let typeMap = typeMap mergedInterfaces
     let itemMap = itemMap interfaceMap typeMap
