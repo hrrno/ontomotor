@@ -151,19 +151,19 @@ let makeProp (foo:ITree) =
                         GetterCode = fun args -> <@@ "[emptyprop]" @@>)
 
 
-let rec baseclassTypeTree (tree:ITree) =
-    let faces, props = tree.Faces, tree.Props
-    let newType = ProvidedTypeDefinition(tree.Item.Name + "Base", Some typeof<MarkdownElement>)
-    for f in faces do 
-            newType.AddMember (f |> baseclassTypeTree)
+//let rec baseclassTypeTree (tree:ITree) =
+//    let faces, props = tree.Faces, tree.Props
+//    let newType = ProvidedTypeDefinition(tree.Item.Name + "Base", Some typeof<MarkdownElement>)
+//    for f in faces do 
+//            newType.AddMember (f |> baseclassTypeTree)
+//
+//    for p in props do
+//        newType.AddMember (p |> makeProp)
+//    newType
 
-    for p in props do
-        newType.AddMember (p |> makeProp)
-    newType
 
 
-
-type TokenInterfaceTree = | InterfaceTree of Token * IItem * TokenInterfaceTree list
+//type TokenInterfaceTree = | InterfaceTree of Token * IItem * TokenInterfaceTree list
 
 module Interface =
 
@@ -173,14 +173,14 @@ module Interface =
 
     let print (t:ITree) = printNode "" t
 
-    let rec decoratedTree (Node(token, subTokens):TokenTree) : TokenInterfaceTree =
-        match token with 
-            | Header (i,c) | Root (i,c) -> 
-                let item = { Name  = "I" + token.Title; }
-                let sub  = [ for s in subTokens do yield decoratedTree s ]
-                InterfaceTree(token, item, sub)
-            | Property (i,c) | Yaml (i,c) -> 
-                InterfaceTree(token, { Name = token.Title }, [])
+//    let rec decoratedTree (Node(token, subTokens):TokenTree) : TokenInterfaceTree =
+//        match token with 
+//            | Header (i,c) | Root (i,c) -> 
+//                let item = { Name  = "I" + token.Title; }
+//                let sub  = [ for s in subTokens do yield decoratedTree s ]
+//                InterfaceTree(token, item, sub)
+//            | Property (i,c) | Yaml (i,c) -> 
+//                InterfaceTree(token, { Name = token.Title }, [])
 
     let rec tree (Node(token, subTokens):TokenTree) : ITree =
         match token with 
@@ -218,17 +218,32 @@ module Interface =
 
 let typeMap (tree:ITree) : Dictionary<ITree,Type> =
     let map = new Dictionary<ITree, Type>()
+    let mutable counter = 0
     let rec generate (tree:ITree) =
-        let newType = ProvidedTypeDefinition(tree.Item.Name + "Base", Some typeof<MarkdownElement>)
-//        for f in tree.Faces do 
-//                newType.AddMember (f |> generate)
-//        for p in tree.Props do
-//            newType.AddMember (p |> makeProp)
+        counter <- counter + 1
+        let newType = ProvidedTypeDefinition(tree.Item.Name + "Base" + counter.ToString(), Some typeof<MarkdownElement>)
+        for f in tree.Faces do 
+                newType.AddMember (f |> generate)
+        for p in tree.Props do
+            newType.AddMember (p |> makeProp)
         map.Add (tree, newType)
         newType
     tree |> generate |> ignore
     map
-    
+
+
+let itemMap (interfaceMap:Dictionary<IItem,ITree>) (typeMap:Dictionary<ITree,Type>) : Dictionary<IItem, Type> = 
+    let map = new Dictionary<IItem, Type>()
+    for KeyValue(k,v) in interfaceMap do
+        map.Add (k, typeMap.Item (v))
+    map
+
+let registerBaseTypes (types:IEnumerable<Type>) =
+    // this.Namespace.AddMembers types
+    ()
+
+let tokensNTypes (tokens:TokenTree) (typeMap:Dictionary<IItem, Type>) = 
+    ()
     
 let interfaces (tree:TokenTree) = 
 
@@ -237,23 +252,22 @@ let interfaces (tree:TokenTree) =
     // maps the tokens to an iface tree
     // maps the iface tree to the merged tree
     // maps the tokens to the merged tree
-
     // replace the merged tree with real types
-        
     // register base types
         
     // returns the merged type tree and the type map
     // return a TokenTree * Type tree
 
-    let decorated = tree |> Interface.decoratedTree
+    //let decorated = tree |> Interface.decoratedTree
     let mergedInterfaces = tree |> Interface.mergedTree
     let interfaces = tree |> Interface.tree
     let interfaceMap = Interface.mergedParentInterface interfaces mergedInterfaces
     let typeMap = typeMap mergedInterfaces
-        
-    let typeTree = mergedInterfaces |> baseclassTypeTree
+    let itemMap = itemMap interfaceMap typeMap
 
-    (tree, tree |> Interface.mergedTree)
+    registerBaseTypes typeMap.Values
+
+    tree, itemMap
 
 let t1t = t1 |> Interface.mergedTree
 let t2t = t2 |> Interface.mergedTree
@@ -275,4 +289,4 @@ t5i |> Interface.print
 t5t |> Interface.print
 let rawr = Interface.mergedParentInterface t5i t5t
 
-t4t |> typeMap
+t1t |> typeMap
