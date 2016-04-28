@@ -217,18 +217,18 @@ module Provide =
         identifiedTokens, typeMap
         
     let rec properties parentTy ((InterfaceTree(token, iitem, subtree):TokenInterfaceTree), typeMap:Dictionary<IItem, ProvidedTypeDefinition>) =
-        match iitem with
-        | iitem when typeMap.ContainsKey(iitem) -> printfn "Unable to find type-match for: %A" iitem
-        | _ ->
-            let baseType = typeMap.Item(iitem) :> Type
+        let baseType =
+            match iitem with
+            | iitem when not <| typeMap.ContainsKey(iitem) -> typeof<MarkdownElement>
+            | _ -> typeMap.Item(iitem) :> Type
 
-            let containerTy = ProvidedTypeDefinition(token.Title + "Container", Some baseType)
-            let prop = token |> propFor containerTy 
+        let containerTy = ProvidedTypeDefinition(token.Title + "Container", Some baseType)
+        let prop = token |> propFor containerTy 
         
-            for node in subtree do 
-                (node, typeMap) |> properties containerTy 
-            parentTy.AddMember prop
-            parentTy.AddMember containerTy
+        for node in subtree do 
+            (node, typeMap) |> properties containerTy 
+        parentTy.AddMember prop
+        parentTy.AddMember containerTy
         
 
     // TODO: the markdown source should provide a "toFile" method which uses the provided file names to call its properties
