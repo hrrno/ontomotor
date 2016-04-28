@@ -190,9 +190,9 @@ module Provide =
         let mutable counter = 0
         let rec generate (tree:ITree) =
             counter <- counter + 1
-            let newType = ProvidedTypeDefinition(tree.Item.Name + "Base" + counter.ToString(), Some typeof<MarkdownElement>)
+            let newType = ProvidedTypeDefinition(Provider.assembly, Provider.namespace', tree.Item.Name + "Base" + counter.ToString(), Some typeof<MarkdownElement>)
             for f in tree.Faces do 
-                    newType.AddMember ((f |> generate):ProvidedTypeDefinition)
+                    newType.AddMember (f |> generate)
             for p in tree.Props do
                 newType.AddMember (p |> makeProp)
             map.Add (tree, newType)
@@ -201,16 +201,16 @@ module Provide =
         map
         
 
-    let registerBaseTypes (provider:TypeProviderForNamespaces) (types:IEnumerable<ProvidedTypeDefinition>) =
-        provider.AddNamespace(Provider.namespace', types |> Seq.toList)
+    let registerBaseTypes (parentTy:ProvidedTypeDefinition) (types:IEnumerable<ProvidedTypeDefinition>) =
+        parentTy.AddMembers(types |> Seq.toList)
 
-    let interfaces (provider:TypeProviderForNamespaces) (tokens:TokenTree) = 
+    let interfaces parentTy (tokens:TokenTree) = 
     
         let interfaces = tokens |> tree
         let mergedInterfaces = tokens |> mergedTree
         let interfaceMap = mergedParentInterface interfaces mergedInterfaces
         let baseTypeMap = typeMap mergedInterfaces
-        registerBaseTypes provider (baseTypeMap.Values)
+        registerBaseTypes parentTy (baseTypeMap.Values)
 
         let typeMap = interfaceToTypeMap interfaceMap baseTypeMap
         let identifiedTokens = decoratedTree tokens
@@ -273,7 +273,7 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
             | Provider.SingleFile ->
                 source 
                 |> Parse.file  
-                |> Provide.interfaces this
+                |> Provide.interfaces proxyType
                 |> Provide.properties proxyType 
 
                 
@@ -291,7 +291,7 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
                                                    GetterCode = fun args -> <@@ new MarkdownFile(file) @@>)
                     file
                     |> Parse.file  
-                    |> Provide.interfaces this
+                    |> Provide.interfaces docType
                     |> Provide.properties docType 
 
                     docCollectionType.AddMember docProp
