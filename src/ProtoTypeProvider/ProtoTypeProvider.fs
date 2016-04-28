@@ -183,7 +183,6 @@ module Provide =
         for p in props do
             newType.AddMember (p |> makeProp)
         newType
-        //(tree, newType)
 
 
     let typeMap (tree:ITree) : Dictionary<ITree,ProvidedTypeDefinition> =

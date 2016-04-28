@@ -6,7 +6,6 @@ module MarkdownStructure
 
 open System
 open System.Collections.Generic
-open ProviderImplementation.ProvidedTypes
 
 
 module Interface =         
@@ -23,11 +22,11 @@ module Interface =
              member x.Props = x.Sub |> List.filter (function | IProp _ -> true | _ -> false)
              member x.Faces = x.Sub |> List.filter (function | IFace _ -> true | _ -> false)
 
-    let rec decoratedTree (Node(token, subTokens):TokenTree) : Token * ITree =
+    let rec interfaceDecoratedTree (Node(token, subTokens):TokenTree) : Token * ITree =
         match token with 
             | Header (i,c) | Root (i,c) -> 
                 let item = { Name  = "I" + token.Title; }
-                let sub  = [ for s in subTokens do yield (decoratedTree s |> snd) ]
+                let sub  = [ for s in subTokens do yield (interfaceDecoratedTree s |> snd) ]
                 token, IFace(item, sub)     
             | Property (i,c) | Yaml (i,c) -> 
                 token, IProp({ Name = token.Title })
