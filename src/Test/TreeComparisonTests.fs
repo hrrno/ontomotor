@@ -183,4 +183,14 @@ t5i |> Interface.print
 t5t |> Interface.print
 let rawr = Interface.mergedParentInterface t5i t5t
 
-t1t |> typeMap
+//t1t |> Interface.typeMap
+
+
+let rec decoratedTokens (Node(token, subTokens):TokenTree) : Token * IItem =
+    match token with 
+        | Header (i,c) | Root (i,c) -> 
+            let item = { Name  = "I" + token.Title; }
+            //let sub  = [ for s in subTokens do yield (decoratedTree s |> snd) ]
+            token, item     
+        | Property (i,c) | Yaml (i,c) -> 
+            token, { Name = token.Title }

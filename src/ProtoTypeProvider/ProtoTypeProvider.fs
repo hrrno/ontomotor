@@ -183,13 +183,22 @@ module Provide =
         tree |> generate |> ignore
         map
 
+    type TokenInterfaceTree = | InterfaceTree of Token * IItem * TokenInterfaceTree list
+
+    let rec decoratedTree (Node(token, subTokens):TokenTree) : TokenInterfaceTree =
+        match token with 
+            | Header (i,c) | Root (i,c) -> 
+                let item = { Name  = "I" + token.Title; }
+                let sub  = [ for s in subTokens do yield decoratedTree s ]
+                InterfaceTree(token, item, sub)
+            | Property (i,c) | Yaml (i,c) -> 
+                InterfaceTree(token, { Name = token.Title }, [])
 
 
     let registerBaseTypes (types:IEnumerable<Type>) =
 
         ////////////////////////
 
-           Think I need to bring back the Token * IItem * Subs data structure, as its use case is in the property mapping
 
 //        1) make provided containers inherit from their mapped types.. Some typeof<MarkdownElement> => typeMap.Item(token.Item)
 //        2) register the types (right here in this function)
@@ -205,10 +214,10 @@ module Provide =
         let interfaces = tokens |> tree
         let merged = tokens |> mergedTree
         let interfaceMap = mergedParentInterface interfaces merged
-        let typeMap = typeMap merged
-        let itemMap = itemMap interfaceMap typeMap
+        let baseTypeMap = typeMap merged
+        let itemMap = itemMap interfaceMap baseTypeMap   /// this isn`t going to work - the maps are indexed by the shared name in the typeMap
 
-        registerBaseTypes typeMap.Values
+        registerBaseTypes baseTypeMap.Values
 
         tokens, itemMap
         
