@@ -38,47 +38,47 @@ module Interface =
         for s in t.Sub do printNode (depth + "----") s
 
     let print (t:ITree) = printNode "" t
-    
-    let rec tree (Node(token, subTokens):TokenTree) : ITree =
-        match token with 
-            | Header (i,c) | Root (i,c) -> 
-                let item = { Name  = "I" + token.Title; }
-                let sub  = [ for s in subTokens do yield tree s ]
-                IFace(item, sub)
-            | Property (i,c) | Yaml (i,c) -> 
-                IProp({ Name = token.Title })
-
-    let rec isContainedBy (merged:ITree) (face:ITree) =   
-        let propsAreContained = 
-            face.Props
-            |> List.fold (fun acc prop -> acc && merged.Props |> List.exists ((=) prop)) true
-
-        let facesAreContained =
-            face.Faces
-            |> List.fold (fun acc face -> acc && merged.Faces |> List.exists (fun mface -> face |> isContainedBy mface) ) true       
-            
-        propsAreContained && facesAreContained
-
-    let mergedParentInterface (face:ITree) (merged:ITree) : Dictionary<IItem,ITree> =
-        let map = new Dictionary<IItem,ITree>()
-        let rec mapTrees (face:ITree) (merged:ITree) =
-            for i in face.Faces do
-                for m in merged.Faces do
-                    if i |> isContainedBy m then
-                        map.Add (i.Item, m)
-                        mapTrees i m
-                    else
-                        printf "No match found for '%s'\r\n" i.Item.Name
-        mapTrees face merged 
-        map
-
-
-
-    let itemMap (interfaceMap:Dictionary<IItem,ITree>) (typeMap:Dictionary<ITree,Type>) : Dictionary<IItem, Type> = 
-        let map = new Dictionary<IItem, Type>()
-        for KeyValue(k,v) in interfaceMap do
-            map.Add (k, typeMap.Item (v))
-        map
+//    
+//    let rec tree (Node(token, subTokens):TokenTree) : ITree =
+//        match token with 
+//            | Header (i,c) | Root (i,c) -> 
+//                let item = { Name  = "I" + token.Title; }
+//                let sub  = [ for s in subTokens do yield tree s ]
+//                IFace(item, sub)
+//            | Property (i,c) | Yaml (i,c) -> 
+//                IProp({ Name = token.Title })
+//
+//    let rec isContainedBy (merged:ITree) (face:ITree) =   
+//        let propsAreContained = 
+//            face.Props
+//            |> List.fold (fun acc prop -> acc && merged.Props |> List.exists ((=) prop)) true
+//
+//        let facesAreContained =
+//            face.Faces
+//            |> List.fold (fun acc face -> acc && merged.Faces |> List.exists (fun mface -> face |> isContainedBy mface) ) true       
+//            
+//        propsAreContained && facesAreContained
+//
+//    let mergedParentInterface (face:ITree) (merged:ITree) : Dictionary<IItem,ITree> =
+//        let map = new Dictionary<IItem,ITree>()
+//        let rec mapTrees (face:ITree) (merged:ITree) =
+//            for i in face.Faces do
+//                for m in merged.Faces do
+//                    if i |> isContainedBy m then
+//                        map.Add (i.Item, m)
+//                        mapTrees i m
+//                    else
+//                        printf "No match found for '%s'\r\n" i.Item.Name
+//        mapTrees face merged 
+//        map
+//
+//
+//
+//    let itemMap (interfaceMap:Dictionary<IItem,ITree>) (typeMap:Dictionary<ITree,Type>) : Dictionary<IItem, Type> = 
+//        let map = new Dictionary<IItem, Type>()
+//        for KeyValue(k,v) in interfaceMap do
+//            map.Add (k, typeMap.Item (v))
+//        map
 
 
 

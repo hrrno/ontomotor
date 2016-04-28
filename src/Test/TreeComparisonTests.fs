@@ -136,19 +136,28 @@ let t5 = [ Root(0, "Root")
 
 
 open MarkdownStructure.Interface
-open ProviderImplementation.ProvidedTypes
+//open ProviderImplementation.ProvidedTypes
 open System.Collections.Generic
 
 
+
+type ProvidedProperty(propertyName: string, propertyType: Type) = 
+    member c.foo = "rawrawr"
+
+
+type ProvidedTypeDefinitionOOO(className : string, baseType: Type option) =
+    member x.AddMember (m:System.Reflection.MethodInfo) = ()
+    member x.AddMember (m:ProvidedProperty) = ()
+    member x.AddMember (m:System.Reflection.PropertyInfo) = ()
+    member x.AddMember (m:ProvidedTypeDefinitionOOO) = ()
+    member x.ToType = typeof<string>
 
 type MarkdownElement =
         { Title: string; }
 
 let makeProp (foo:ITree) = 
     let prop = match foo with | IProp el -> el | _ -> failwith "Properties should only come from IProp's"
-    ProvidedProperty(propertyName = prop.Name, 
-                        propertyType = typeof<string>, 
-                        GetterCode = fun args -> <@@ "[emptyprop]" @@>)
+    ProvidedProperty(propertyName = prop.Name,  propertyType = typeof<string>)
 
 
 //let rec baseclassTypeTree (tree:ITree) =
@@ -162,6 +171,143 @@ let makeProp (foo:ITree) =
 //    newType
 
 
+module Interface =
+
+
+    let rec tree (Node(token, subTokens):TokenTree) : ITree =
+        match token with 
+            | Header (i,c) | Root (i,c) -> 
+                let item = { Name  = "I" + token.Title; }
+                let sub  = [ for s in subTokens do yield tree s ]
+                IFace(item, sub)
+            | Property (i,c) | Yaml (i,c) -> 
+                IProp({ Name = token.Title })
+
+    let rec isContainedBy (merged:ITree) (face:ITree) =   
+        let propsAreContained = 
+            face.Props
+            |> List.fold (fun acc prop -> acc && merged.Props |> List.exists ((=) prop)) true
+
+        let facesAreContained =
+            face.Faces
+            |> List.fold (fun acc face -> acc && merged.Faces |> List.exists (fun mface -> face |> isContainedBy mface) ) true       
+            
+        propsAreContained && facesAreContained
+
+    let mergedParentInterface (face:ITree) (merged:ITree) : Dictionary<IItem,ITree> =
+        let map = new Dictionary<IItem,ITree>()
+        let rec mapTrees (face:ITree) (merged:ITree) =
+            for i in face.Faces do
+                for m in merged.Faces do
+                    if i |> isContainedBy m then
+                        map.Add (i.Item, m)
+                        mapTrees i m
+                    else
+                        printf "No match found for '%s'\r\n" i.Item.Name
+        mapTrees face merged 
+        map
+
+
+
+    let itemMap (interfaceMap:Dictionary<IItem,ITree>) (typeMap:Dictionary<ITree,ProvidedTypeDefinitionOOO>) : Dictionary<IItem, ProvidedTypeDefinitionOOO> = 
+        let map = new Dictionary<IItem, ProvidedTypeDefinitionOOO>()
+        for KeyValue(k,v) in interfaceMap do
+            map.Add (k, typeMap.Item (v))
+        map
+
+
+    let rec baseclassTypeTree (tree:ITree) =
+        let faces, props = tree.Faces, tree.Props
+        let newType = ProvidedTypeDefinitionOOO(tree.Item.Name + "Base", Some typeof<MarkdownElement>)
+        for f in faces do 
+                newType.AddMember ((f |> baseclassTypeTree):ProvidedTypeDefinitionOOO)
+
+        for p in props do
+            newType.AddMember (p |> makeProp)
+        newType
+        //(tree, newType)
+
+
+    let typeMap (tree:ITree) : Dictionary<ITree,ProvidedTypeDefinitionOOO> =
+        let map = new Dictionary<ITree, ProvidedTypeDefinitionOOO>()
+        let mutable counter = 0
+        let rec generate (tree:ITree) =
+            counter <- counter + 1
+            let newType = ProvidedTypeDefinitionOOO(tree.Item.Name + "Base" + counter.ToString(), Some typeof<MarkdownElement>)
+            for f in tree.Faces do 
+                    newType.AddMember ((f |> generate):ProvidedTypeDefinitionOOO)
+            for p in tree.Props do
+                newType.AddMember (p |> makeProp)
+            map.Add (tree, newType)
+            newType
+        tree |> generate |> ignore
+        map
+
+    type TokenInterfaceTree = | InterfaceTree of Token * IItem * TokenInterfaceTree list
+
+    let rec decoratedTree (Node(token, subTokens):TokenTree) : TokenInterfaceTree =
+        match token with 
+            | Header (i,c) | Root (i,c) -> 
+                let item = { Name  = "I" + token.Title; }
+                let sub  = [ for s in subTokens do yield decoratedTree s ]
+                InterfaceTree(token, item, sub)
+            | Property (i,c) | Yaml (i,c) -> 
+                InterfaceTree(token, { Name = token.Title }, [])
+
+
+    let registerBaseTypes (types:IEnumerable<Type>) =
+
+        ////////////////////////
+
+
+//        1) make provided containers inherit from their mapped types.. Some typeof<MarkdownElement> => typeMap.Item(token.Item)
+//        2) register the types (right here in this function)
+//        3) test
+//        4) refactor
+
+        // this.Namespace.AddMembers types
+        ////////////////////////
+        ()
+
+    let interfaces (tokens:TokenTree) = 
+    
+        let interfaces = tokens |> tree
+        let merged = tokens |> mergedTree
+        let interfaceMap = mergedParentInterface interfaces merged
+        let baseTypeMap = typeMap merged
+        let itemMap = itemMap interfaceMap baseTypeMap   /// this isn`t going to work - the maps are indexed by the shared name in the typeMap
+
+        //registerBaseTypes baseTypeMap.Values
+
+        tokens, itemMap
+        
+        
+    let propFor (containerType : ProvidedTypeDefinitionOOO) (token : Token) =
+//        let (type', getter:Quotations.Expr) =
+//            match token with
+//            | Root(i,c) | Header(i,c) ->
+//                let title = token.Title
+//                (containerType :> Type), <@@ MarkdownDom.create title @@>
+//            | Property _ | Yaml _ -> 
+//                match token.Content with
+//                | IsBool c   -> typeof<bool>,     <@@ bool c   @@> 
+//                | IsDate c   -> typeof<DateTime>, <@@ date c   @@>
+//                | IsDouble c -> typeof<float>,    <@@ float c  @@> 
+//                | IsInt c    -> typeof<int>,      <@@ int c    @@> 
+//                | c          -> typeof<string>,   <@@ string c @@> 
+
+        ProvidedProperty(propertyName = token.Title, 
+                         propertyType = typeof<string>)
+
+    let rec properties parentTy ((Node(token, subtree):TokenTree), typeMap:Dictionary<IItem,Type>) =
+        //let baseType = typeMap.Item(token)
+        let containerTy = ProvidedTypeDefinitionOOO(token.Title + "Container", Some typeof<MarkdownElement>)
+        let prop = propFor containerTy token
+        
+        for node in subtree do 
+            (node, typeMap) |> properties containerTy 
+        parentTy.AddMember prop
+        parentTy.AddMember containerTy
 
 let t1t = t1 |> Interface.mergedTree
 let t2t = t2 |> Interface.mergedTree
