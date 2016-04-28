@@ -146,6 +146,7 @@ type ProvidedProperty(propertyName: string, propertyType: Type) =
 
 
 type ProvidedTypeDefinitionOOO(className : string, baseType: Type option) =
+    new (classname: string, baseType: ProvidedTypeDefinitionOOO option) = ProvidedTypeDefinitionOOO(classname, Some typeof<string>)
     member x.AddMember (m:System.Reflection.MethodInfo) = ()
     member x.AddMember (m:ProvidedProperty) = ()
     member x.AddMember (m:System.Reflection.PropertyInfo) = ()
@@ -209,7 +210,7 @@ module Interface =
 
 
 
-    let itemMap (interfaceMap:Dictionary<IItem,ITree>) (typeMap:Dictionary<ITree,ProvidedTypeDefinitionOOO>) : Dictionary<IItem, ProvidedTypeDefinitionOOO> = 
+    let interfaceToTypeMap (interfaceMap:Dictionary<IItem,ITree>) (typeMap:Dictionary<ITree,ProvidedTypeDefinitionOOO>) : Dictionary<IItem, ProvidedTypeDefinitionOOO> = 
         let map = new Dictionary<IItem, ProvidedTypeDefinitionOOO>()
         for KeyValue(k,v) in interfaceMap do
             map.Add (k, typeMap.Item (v))
@@ -255,59 +256,49 @@ module Interface =
                 InterfaceTree(token, { Name = token.Title }, [])
 
 
-    let registerBaseTypes (types:IEnumerable<Type>) =
 
-        ////////////////////////
-
-
-//        1) make provided containers inherit from their mapped types.. Some typeof<MarkdownElement> => typeMap.Item(token.Item)
-//        2) register the types (right here in this function)
-//        3) test
-//        4) refactor
-
-        // this.Namespace.AddMembers types
-        ////////////////////////
+    let registerBaseTypes (types:IEnumerable<ProvidedTypeDefinitionOOO>) =
+        // for t in types do
+        //  this.Namespace.AddMembers type
         ()
 
     let interfaces (tokens:TokenTree) = 
     
         let interfaces = tokens |> tree
-        let merged = tokens |> mergedTree
-        let interfaceMap = mergedParentInterface interfaces merged
-        let baseTypeMap = typeMap merged
-        let itemMap = itemMap interfaceMap baseTypeMap   /// this isn`t going to work - the maps are indexed by the shared name in the typeMap
+        let mergedInterfaces = tokens |> mergedTree
+        let interfaceMap = mergedParentInterface interfaces mergedInterfaces
+        let baseTypeMap = typeMap mergedInterfaces
+        registerBaseTypes baseTypeMap.Values
 
-        //registerBaseTypes baseTypeMap.Values
-
-        tokens, itemMap
+        let typeMap = interfaceToTypeMap interfaceMap baseTypeMap
+        let identifiedTokens = decoratedTree tokens
+        identifiedTokens, typeMap
         
         
     let propFor (containerType : ProvidedTypeDefinitionOOO) (token : Token) =
-//        let (type', getter:Quotations.Expr) =
-//            match token with
-//            | Root(i,c) | Header(i,c) ->
-//                let title = token.Title
-//                (containerType :> Type), <@@ MarkdownDom.create title @@>
-//            | Property _ | Yaml _ -> 
-//                match token.Content with
-//                | IsBool c   -> typeof<bool>,     <@@ bool c   @@> 
-//                | IsDate c   -> typeof<DateTime>, <@@ date c   @@>
-//                | IsDouble c -> typeof<float>,    <@@ float c  @@> 
-//                | IsInt c    -> typeof<int>,      <@@ int c    @@> 
-//                | c          -> typeof<string>,   <@@ string c @@> 
-
         ProvidedProperty(propertyName = token.Title, 
                          propertyType = typeof<string>)
 
-    let rec properties parentTy ((Node(token, subtree):TokenTree), typeMap:Dictionary<IItem,Type>) =
-        //let baseType = typeMap.Item(token)
-        let containerTy = ProvidedTypeDefinitionOOO(token.Title + "Container", Some typeof<MarkdownElement>)
+    let rec properties parentTy ((InterfaceTree(token, iitem, subtree):TokenInterfaceTree), typeMap:Dictionary<IItem,ProvidedTypeDefinitionOOO>) =
+        let baseType = typeMap.Item(iitem)
+        let containerTy = ProvidedTypeDefinitionOOO(token.Title + "Container", Some baseType)
         let prop = propFor containerTy token
         
         for node in subtree do 
             (node, typeMap) |> properties containerTy 
         parentTy.AddMember prop
         parentTy.AddMember containerTy
+
+
+
+
+//t5 |> Interface.interfaces |> Interface.properties
+
+
+
+
+
+
 
 let t1t = t1 |> Interface.mergedTree
 let t2t = t2 |> Interface.mergedTree

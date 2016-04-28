@@ -155,34 +155,6 @@ module Provide =
 
 
 
-
-    let rec baseclassTypeTree (tree:ITree) =
-        let faces, props = tree.Faces, tree.Props
-        let newType = ProvidedTypeDefinition(tree.Item.Name + "Base", Some typeof<MarkdownElement>)
-        for f in faces do 
-                newType.AddMember (f |> baseclassTypeTree)
-
-        for p in props do
-            newType.AddMember (p |> makeProp)
-        newType
-        //(tree, newType)
-
-
-    let typeMap (tree:ITree) : Dictionary<ITree,Type> =
-        let map = new Dictionary<ITree, Type>()
-        let mutable counter = 0
-        let rec generate (tree:ITree) =
-            counter <- counter + 1
-            let newType = ProvidedTypeDefinition(tree.Item.Name + "Base" + counter.ToString(), Some typeof<MarkdownElement>)
-            for f in tree.Faces do 
-                    newType.AddMember (f |> generate)
-            for p in tree.Props do
-                newType.AddMember (p |> makeProp)
-            map.Add (tree, newType)
-            newType
-        tree |> generate |> ignore
-        map
-
     type TokenInterfaceTree = | InterfaceTree of Token * IItem * TokenInterfaceTree list
 
     let rec decoratedTree (Node(token, subTokens):TokenTree) : TokenInterfaceTree =
@@ -195,37 +167,59 @@ module Provide =
                 InterfaceTree(token, { Name = token.Title }, [])
 
 
-    let registerBaseTypes (types:IEnumerable<Type>) =
+    let interfaceToTypeMap (interfaceMap:Dictionary<IItem,ITree>) (typeMap:Dictionary<ITree,ProvidedTypeDefinition>) : Dictionary<IItem, ProvidedTypeDefinition> = 
+        let map = new Dictionary<IItem, ProvidedTypeDefinition>()
+        for KeyValue(k,v) in interfaceMap do
+            map.Add (k, typeMap.Item (v))
+        map
 
-        ////////////////////////
+
+    let rec baseclassTypeTree (tree:ITree) =
+        let faces, props = tree.Faces, tree.Props
+        let newType = ProvidedTypeDefinition(tree.Item.Name + "Base", Some typeof<MarkdownElement>)
+        for f in faces do 
+                newType.AddMember ((f |> baseclassTypeTree):ProvidedTypeDefinition)
+
+        for p in props do
+            newType.AddMember (p |> makeProp)
+        newType
+        //(tree, newType)
 
 
-//        1) make provided containers inherit from their mapped types.. Some typeof<MarkdownElement> => typeMap.Item(token.Item)
-//        2) register the types (right here in this function)
-//        3) test
-//        4) refactor
+    let typeMap (tree:ITree) : Dictionary<ITree,ProvidedTypeDefinition> =
+        let map = new Dictionary<ITree, ProvidedTypeDefinition>()
+        let mutable counter = 0
+        let rec generate (tree:ITree) =
+            counter <- counter + 1
+            let newType = ProvidedTypeDefinition(tree.Item.Name + "Base" + counter.ToString(), Some typeof<MarkdownElement>)
+            for f in tree.Faces do 
+                    newType.AddMember ((f |> generate):ProvidedTypeDefinition)
+            for p in tree.Props do
+                newType.AddMember (p |> makeProp)
+            map.Add (tree, newType)
+            newType
+        tree |> generate |> ignore
+        map
+        
 
-        // this.Namespace.AddMembers types
-        ////////////////////////
-        ()
+    let registerBaseTypes (provider:TypeProviderForNamespaces) (types:IEnumerable<ProvidedTypeDefinition>) =
+        provider.AddNamespace(Provider.namespace', types |> Seq.toList)
 
-    let interfaces (tokens:TokenTree) = 
+    let interfaces (provider:TypeProviderForNamespaces) (tokens:TokenTree) = 
     
         let interfaces = tokens |> tree
-        let merged = tokens |> mergedTree
-        let interfaceMap = mergedParentInterface interfaces merged
-        let baseTypeMap = typeMap merged
-        let itemMap = itemMap interfaceMap baseTypeMap   /// this isn`t going to work - the maps are indexed by the shared name in the typeMap
+        let mergedInterfaces = tokens |> mergedTree
+        let interfaceMap = mergedParentInterface interfaces mergedInterfaces
+        let baseTypeMap = typeMap mergedInterfaces
+        registerBaseTypes provider (baseTypeMap.Values)
 
-        registerBaseTypes baseTypeMap.Values
-
-        tokens, itemMap
+        let typeMap = interfaceToTypeMap interfaceMap baseTypeMap
+        let identifiedTokens = decoratedTree tokens
+        identifiedTokens, typeMap
         
-        
-
-    let rec properties parentTy ((Node(token, subtree):TokenTree), typeMap:Dictionary<IItem,Type>) =
-        let baseType = typeMap.Item(token)
-        let containerTy = ProvidedTypeDefinition(token.Title + "Container", Some typeof<MarkdownElement>)
+    let rec properties parentTy ((InterfaceTree(token, iitem, subtree):TokenInterfaceTree), typeMap:Dictionary<IItem, ProvidedTypeDefinition>) =
+        let baseType = typeMap.Item(iitem) :> Type
+        let containerTy = ProvidedTypeDefinition(token.Title + "Container", Some baseType)
         let prop = token |> propFor containerTy 
         
         for node in subtree do 
@@ -277,7 +271,7 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
             | Provider.SingleFile ->
                 source 
                 |> Parse.file  
-                |> Provide.interfaces
+                |> Provide.interfaces this
                 |> Provide.properties proxyType 
 
                 
@@ -295,7 +289,7 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
                                                    GetterCode = fun args -> <@@ new MarkdownFile(file) @@>)
                     file
                     |> Parse.file  
-                    |> Provide.interfaces
+                    |> Provide.interfaces this
                     |> Provide.properties docType 
 
                     docCollectionType.AddMember docProp
