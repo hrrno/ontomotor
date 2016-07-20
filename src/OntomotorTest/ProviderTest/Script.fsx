@@ -22,7 +22,7 @@ bawr.Nameo, rawr.Nameo
 let x = foo.Documents.content_autoprops.Root.Foo.Bar
 let o = foo.Documents.content_autoprops.Root.Foo.Bar.Baz
 let d = foo.Documents.content_autoprops.Root.Foo.GetType().GetInterfaces()
-let d = foo.Documents.content_autoprops.Root.Foo.Bar.GetType().GetInterfaces()
+let e = foo.Documents.content_autoprops.Root.Foo.Bar.GetType().GetInterfaces()
 foo.Documents.content_autoprops_badstructure.Root.H1_1.H1_1_H2_1
 
 
@@ -38,10 +38,10 @@ foo.Documents.content_autoprops_badstructure.Root.H1_1.H1_1_H2_1
 //    let p = this.GetType().GetProperty(prop)
 //    p.GetValue(this, null) :?> 'Result
 
-foo.Documents.frontmatter_withlists // .``content-autoprops`` // .``content-autoprops-simple``.Root.Foo.Bar.BoolProp
+foo.Documents. // .``content-autoprops`` // .``content-autoprops-simple``.Root.Foo.Bar.BoolProp
 
 foo.Documents.content_autoprops_badstructure.Root.H1_1.H1_1_H2_1
-foo
+foo.Documents.content_autoprops_badstructure.Root.H1_3.H1_3_H2_1_H2_1
 
 
 //let docList : Proto.TypeProviderType.Provider.MarkdownFile list = [ foo.Document1; foo.Document2; foo.Document3 ]

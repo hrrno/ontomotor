@@ -172,7 +172,7 @@ let makeProp (foo:ITree) =
 //    newType
 
 
-module Interface =
+module InterfaceTest =
 
 
     let rec tree (Node(token, subTokens):TokenTree) : ITree =
@@ -293,12 +293,6 @@ module Interface =
 
 
 //t5 |> Interface.interfaces |> Interface.properties
-
-
-
-
-
-
 
 let t1t = t1 |> Interface.mergedTree
 let t2t = t2 |> Interface.mergedTree

@@ -285,7 +285,7 @@ type ProtoTypeProvider(config: TypeProviderConfig) as this =
                 
 
                 for file in source |> markdownFiles do
-                    let docType = ProvidedTypeDefinition("DocumentContainer" + (file |> MarkdownFile.safeName), Some typeof<MarkdownFile>)
+                    let docType = ProvidedTypeDefinition("DocumentContainer_" + (file |> MarkdownFile.safeName), Some typeof<MarkdownFile>)
                     let docProp = ProvidedProperty(propertyName = (file |> MarkdownFile.safeName), 
                                                    propertyType = docType, 
                                                    GetterCode = fun args -> <@@ new MarkdownFile(file) @@>)
