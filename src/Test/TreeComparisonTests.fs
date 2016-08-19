@@ -312,7 +312,13 @@ let t5i = t5 |> Interface.tree
 
 t5i |> Interface.print
 t5t |> Interface.print
-let rawr = Interface.mergedParentInterface t5i t5t
+let t5Complete = Interface.mergedParentInterface t5i t5t
+
+
+//
+// t5 and t5Complete have the operation test of the interface generation
+//
+
 
 //t1t |> Interface.typeMap
 
